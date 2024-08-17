@@ -142,7 +142,9 @@ func (t testReader) ReadFrom(r io.Reader) (int64, error) { return 0, nil }
 
 func TestParserRead(t *testing.T) {
 	data := make([]byte, 128)
-	rand.Read(data)
+	if _, err := rand.Read(data); err != nil {
+		t.Errorf("failed to create random sequence of bytes - %v", err)
+	}
 
 	r := testReader{bytes.NewReader(data)}
 	p := Parser{reader: r}

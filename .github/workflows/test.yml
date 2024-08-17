@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: ["1.21.x", "1.22.x"]
+        go: ["1.20.x", "1.21.x", "1.22.x"]
         include:
         - go: 1.22.x
 
@@ -53,8 +53,5 @@ jobs:
         # make lint below will handle actually running the linter.
         args: --help
 
-    - run: make lint
-      name: Lint
-
-    - name: vulncheck
-      run: make vulncheck
+    - name: Lint
+      run: golangci-lint run
