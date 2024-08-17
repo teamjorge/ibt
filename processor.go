@@ -1,8 +1,7 @@
-package telemetry
+package ibt
 
 import (
 	"github.com/teamjorge/ibt/headers"
-	"github.com/teamjorge/ibt/parsing"
 )
 
 type Processor interface {
@@ -17,7 +16,7 @@ func Process(reader headers.Reader, header headers.Header, processors ...Process
 		whitelist = append(whitelist, proc.Whitelist()...)
 	}
 
-	parser := parsing.NewParser(reader, header, whitelist...)
+	parser := NewParser(reader, header, whitelist...)
 
 	for {
 		tick, hasNext := parser.Next()

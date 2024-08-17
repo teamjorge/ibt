@@ -1,4 +1,4 @@
-package parsing
+package ibt
 
 import (
 	"github.com/teamjorge/ibt/headers"
