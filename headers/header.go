@@ -10,6 +10,15 @@ type Header struct {
 	sessionInfo *Session
 }
 
+func NewHeader(telemHeader *TelemetryHeader, diskHeader *DiskHeader, varHeader map[string]VarHeader, sessionInfo *Session) Header {
+	return Header{
+		telemHeader: telemHeader,
+		diskHeader:  diskHeader,
+		varHeader:   varHeader,
+		sessionInfo: sessionInfo,
+	}
+}
+
 // TelemetryHeader returns the loaded telemetry sub-header.
 func (h *Header) TelemetryHeader() *TelemetryHeader { return h.telemHeader }
 

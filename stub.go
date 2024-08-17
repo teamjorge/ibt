@@ -3,48 +3,52 @@ package ibt
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"regexp"
 	"time"
 
 	"github.com/teamjorge/ibt/headers"
 )
 
-type IbtStub struct {
+// Stub represents the headers and filename parsed from an ibt file.
+//
+// Stubs are used for initial parsing of ibt files and their metadata. This can be useful
+// to make decisions regarding which files should have their telemetry parsed.
+type Stub struct {
 	filepath string
 	header   headers.Header
 }
 
-func (stub *IbtStub) Filename() string         { return stub.filepath }
-func (stub *IbtStub) Headers() *headers.Header { return &stub.header }
+// Filename where the stub originated from
+func (stub *Stub) Filename() string { return stub.filepath }
 
-func (stub *IbtStub) Time() (time.Time, error) {
-	datePattern, err := regexp.Compile(`\d{4}-\d{2}-\d{2}\s\d{2}-\d{2}-\d{2}`)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("failed to parse date pattern for stub time - %v", err)
+// Headers that were parsed when the stub was created
+func (stub *Stub) Headers() *headers.Header { return &stub.header }
+
+// Time when the stub was created
+func (stub *Stub) Time() (time.Time, error) {
+	parsedTime := time.Unix(stub.header.DiskHeader().StartDate, 0)
+	currentYear := time.Now().Year()
+
+	if parsedTime.Year() < currentYear-20 || currentYear > parsedTime.Year() {
+		return time.Time{}, fmt.Errorf("invalid time detected from disk header: %v", parsedTime)
 	}
 
-	filename := filepath.Base(stub.filepath)
-
-	foundPattern := datePattern.FindString(filename)
-	if foundPattern == "" {
-		return time.Time{}, fmt.Errorf("failed to find date pattern in filename %s", stub.filepath)
-	}
-
-	t, err := time.Parse("2006-01-02 15-04-05", foundPattern)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("failed to parse date pattern for filename %s - %v", stub.filepath, err)
-	}
-
-	return t, nil
+	return parsedTime, nil
 }
 
-func (stub *IbtStub) DriverIdx() int {
+// DriverIdx is the index of the current driver.
+//
+// This value is useful when parsing telemetry or session info where the index of the driver
+// is required.
+func (stub *Stub) DriverIdx() int {
 	return stub.header.SessionInfo().DriverInfo.DriverCarIdx
 }
 
-type StubGroup []IbtStub
+// StubGroup is a grouping of stubs.
+//
+// This group is not necessarily part of the same session, but can be grouped with Group().
+type StubGroup []Stub
 
+// ParseStubs will create a stub for each of the given files by parsing their headers.
 func ParseStubs(files ...string) (StubGroup, error) {
 	stubs := make(StubGroup, 0)
 
@@ -60,8 +64,9 @@ func ParseStubs(files ...string) (StubGroup, error) {
 	return stubs, nil
 }
 
-func parseStub(filename string) (IbtStub, error) {
-	var stub IbtStub
+// parseStub will create a stub from the given file by parsing it's headers.
+func parseStub(filename string) (Stub, error) {
+	var stub Stub
 
 	f, err := os.Open(filename)
 	if err != nil {
@@ -74,18 +79,26 @@ func parseStub(filename string) (IbtStub, error) {
 		return stub, fmt.Errorf("failed to parse headers for file %s - %v", filename, err)
 	}
 
-	return IbtStub{filename, header}, nil
+	return Stub{filename, header}, nil
 }
 
+// Group stubs together by their IRacing session.
+//
+// The process for grouping is slightly different for official and test sessions.
+// Official sessions can utilise the SubSessionID, whereas Test sessions
+// use the ResultsPosition field to determine the start/end of a session.
 func (stubs StubGroup) Group() []StubGroup {
 	sessionStubMap := make(map[int]StubGroup)
 
+	// Group stubs of the same SubSessionID together
 	for _, stub := range stubs {
 		subSessionId := stub.header.SessionInfo().WeekendInfo.SubSessionID
 		sessionStubMap[subSessionId] = append(sessionStubMap[subSessionId], stub)
 	}
 
 	groups := make([]StubGroup, 0)
+	// Groups that have a SubSessionID of 0 are considered as Test sessions and
+	// are grouped using a separate method
 	if testSessionStubGroup, ok := sessionStubMap[0]; ok {
 		groups = append(groups, groupTestSessionStubs(testSessionStubGroup)...)
 	}
@@ -99,20 +112,27 @@ func (stubs StubGroup) Group() []StubGroup {
 	return groups
 }
 
+// groupTestSessionStubs ensures that ibt files from IRacing Test sessions are grouped correctly.
+//
+// The logic for grouping Test session files is slightly different due to the lack of subSessionIds
+// and rely on the ResultsPosition variable to determine start and end of a group.
 func groupTestSessionStubs(stubs StubGroup) []StubGroup {
 	groups := make([]StubGroup, 0)
 
-	currentGroup := make([]IbtStub, 0)
+	currentGroup := make([]Stub, 0)
 	for _, stub := range stubs {
+		// ResultsPosition nil indicate the first ibt file of a new session
 		if stub.header.SessionInfo().SessionInfo.Sessions[0].ResultsPositions != nil {
 			currentGroup = append(currentGroup, stub)
 		} else {
+			// Determine if it should end the existing group and create a new one
 			if len(currentGroup) > 0 {
 				groups = append(groups, currentGroup)
 			}
 			currentGroup = StubGroup{stub}
 		}
 	}
+	// Ensure group contains files
 	if len(currentGroup) > 0 {
 		groups = append(groups, currentGroup)
 	}

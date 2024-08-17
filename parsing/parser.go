@@ -69,6 +69,7 @@ func (p *Parser) Next() (map[string]headers.VarHeader, bool) {
 	return newVars, nextBuf != nil
 }
 
+// read the next buffer from offset to the current length set by the parser
 func (p *Parser) read(start int) []byte {
 	buf := make([]byte, p.length)
 	_, err := p.reader.ReadAt(buf, int64(start))

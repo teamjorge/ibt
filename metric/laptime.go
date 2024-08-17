@@ -5,8 +5,12 @@ import (
 	"math"
 )
 
+// LapTime is a lap time measured in seconds
 type LapTime float32
 
+// ToString converts the given lap time to an 0m:0s.0ms form
+//
+// For example: 78,583 seconds will be representated as 01:18.583
 func (l LapTime) ToString() string {
 	lapMS := float64(l * 1000)
 
