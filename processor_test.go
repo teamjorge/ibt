@@ -31,7 +31,7 @@ func (t *testErrorProcessor) Process(input map[string]headers.VarHeader, hasNext
 func (t *testErrorProcessor) Whitelist() []string { return []string{"LapCurrentLapTime"} }
 
 func TestProcess(t *testing.T) {
-	f, err := os.Open("../.testing/valid_test_file.ibt")
+	f, err := os.Open(".testing/valid_test_file.ibt")
 	if err != nil {
 		t.Errorf("failed to open testing file - %v", err)
 		return

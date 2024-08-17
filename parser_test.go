@@ -12,7 +12,7 @@ import (
 )
 
 func TestParser(t *testing.T) {
-	f, err := os.Open("../.testing/valid_test_file.ibt")
+	f, err := os.Open(".testing/valid_test_file.ibt")
 	if err != nil {
 		t.Errorf("failed to open testing file - %v", err)
 		return
@@ -62,7 +62,7 @@ func TestParser(t *testing.T) {
 }
 
 func TestParserNext(t *testing.T) {
-	f, err := os.Open("../.testing/valid_test_file.ibt")
+	f, err := os.Open(".testing/valid_test_file.ibt")
 	if err != nil {
 		t.Errorf("failed to open testing file - %v", err)
 		return
