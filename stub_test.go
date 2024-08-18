@@ -3,6 +3,7 @@ package ibt
 import (
 	"os"
 	"reflect"
+	"sort"
 	"testing"
 	"time"
 
@@ -44,41 +45,11 @@ func TestStubs(t *testing.T) {
 	})
 
 	t.Run("stubs Time() valid time", func(t *testing.T) {
-		parsedTime, err := testStub.Time()
-
-		if err != nil {
-			t.Errorf("expected err to be nil but got %v", err)
-		}
+		parsedTime := testStub.Time()
 
 		expectedTime, _ := time.Parse("2006-01-02 15:04:05", "2024-06-24 16:02:03")
 		if parsedTime.Equal(expectedTime) {
 			t.Errorf("expected time to be %v but got %v", expectedTime, parsedTime)
-		}
-	})
-
-	t.Run("stubs Time() invalid time", func(t *testing.T) {
-		// Value below threshold
-		h := headers.NewHeader(&headers.TelemetryHeader{}, &headers.DiskHeader{StartDate: 192138}, map[string]headers.VarHeader{}, &headers.Session{})
-
-		invalidTimeStub := Stub{filepath: ".testing/valid_test_file.ibt", header: h}
-		_, err := invalidTimeStub.Time()
-
-		if err == nil {
-			t.Error("expected err to contain a value but received nil")
-		}
-
-		invalidTimeStub.header = headers.NewHeader(
-			&headers.TelemetryHeader{},
-			&headers.DiskHeader{StartDate: time.Now().Add(time.Hour * (24 * 1000)).Unix()},
-			map[string]headers.VarHeader{},
-			&headers.Session{},
-		)
-
-		invalidTimeStub = Stub{filepath: ".testing/valid_test_file.ibt", header: h}
-		_, err = invalidTimeStub.Time()
-
-		if err == nil {
-			t.Error("expected err to contain a value but received nil")
 		}
 	})
 
@@ -187,22 +158,30 @@ func TestParseStubs(t *testing.T) {
 }
 
 func TestGroupTestSessionStubs(t *testing.T) {
-	sessionResultPos := &headers.Session{SessionInfo: headers.SessionInfo{Sessions: []headers.Sessions{{ResultsPositions: 1}}}}
-	sessionNoResultPos := &headers.Session{SessionInfo: headers.SessionInfo{Sessions: []headers.Sessions{{ResultsPositions: nil}}}}
+	makeHeader := func(subSessionId int, ResultsPositions interface{}, ts int64) headers.Header {
+		return headers.NewHeader(
+			nil,
+			&headers.DiskHeader{StartDate: ts},
+			nil,
+			&headers.Session{WeekendInfo: headers.WeekendInfo{SubSessionID: subSessionId}, SessionInfo: headers.SessionInfo{Sessions: []headers.Sessions{{ResultsPositions: ResultsPositions}}}},
+		)
+	}
+
+	now := time.Now()
 
 	stub1 := Stub{
 		filepath: "stub_1.ibt",
-		header:   headers.NewHeader(nil, nil, nil, sessionNoResultPos),
+		header:   makeHeader(3, nil, now.Add(-120*time.Minute).Unix()),
 	}
 
 	stub2 := Stub{
 		filepath: "stub_2.ibt",
-		header:   headers.NewHeader(nil, nil, nil, sessionResultPos),
+		header:   makeHeader(0, 1, now.Add(-60*time.Minute).Unix()),
 	}
 
 	stub3 := Stub{
 		filepath: "stub_3.ibt",
-		header:   headers.NewHeader(nil, nil, nil, sessionResultPos),
+		header:   makeHeader(0, 1, now.Unix()),
 	}
 
 	t.Run("test groupTestSessionStubs() with regular pattern", func(t *testing.T) {
@@ -247,51 +226,55 @@ func TestGroupTestSessionStubs(t *testing.T) {
 }
 
 func TestGroup(t *testing.T) {
-	sessionWithSubsession1 := &headers.Session{WeekendInfo: headers.WeekendInfo{SubSessionID: 1}}
-	sessionWithSubsession2 := &headers.Session{WeekendInfo: headers.WeekendInfo{SubSessionID: 2}}
-	sessionWithSubsession3 := &headers.Session{WeekendInfo: headers.WeekendInfo{SubSessionID: 3}}
+	makeHeader := func(subSessionId int, ResultsPositions interface{}, ts int64) headers.Header {
+		return headers.NewHeader(
+			nil,
+			&headers.DiskHeader{StartDate: ts},
+			nil,
+			&headers.Session{WeekendInfo: headers.WeekendInfo{SubSessionID: subSessionId}, SessionInfo: headers.SessionInfo{Sessions: []headers.Sessions{{ResultsPositions: ResultsPositions}}}},
+		)
+	}
 
-	sessionNoResultPos := &headers.Session{SessionInfo: headers.SessionInfo{Sessions: []headers.Sessions{{ResultsPositions: nil}}}}
-	sessionResultPos := &headers.Session{SessionInfo: headers.SessionInfo{Sessions: []headers.Sessions{{ResultsPositions: 1}}}}
+	now := time.Now()
 
 	stub1 := Stub{
 		filepath: "stub_1.ibt",
-		header:   headers.NewHeader(nil, nil, nil, sessionWithSubsession1),
+		header:   makeHeader(1, nil, now.Add(-420*time.Minute).Unix()),
 	}
 
 	stub2 := Stub{
 		filepath: "stub_2.ibt",
-		header:   headers.NewHeader(nil, nil, nil, sessionWithSubsession1),
+		header:   makeHeader(1, nil, now.Add(-360*time.Minute).Unix()),
 	}
 
 	stub3 := Stub{
 		filepath: "stub_3.ibt",
-		header:   headers.NewHeader(nil, nil, nil, sessionWithSubsession1),
+		header:   makeHeader(1, nil, now.Add(-300*time.Minute).Unix()),
 	}
 
 	stub4 := Stub{
 		filepath: "stub_4.ibt",
-		header:   headers.NewHeader(nil, nil, nil, sessionWithSubsession2),
+		header:   makeHeader(2, nil, now.Add(-240*time.Minute).Unix()),
 	}
 
 	stub5 := Stub{
 		filepath: "stub_5.ibt",
-		header:   headers.NewHeader(nil, nil, nil, sessionWithSubsession2),
+		header:   makeHeader(2, nil, now.Add(-180*time.Minute).Unix()),
 	}
 
 	stub6 := Stub{
 		filepath: "stub_6.ibt",
-		header:   headers.NewHeader(nil, nil, nil, sessionWithSubsession3),
+		header:   makeHeader(3, nil, now.Add(-120*time.Minute).Unix()),
 	}
 
 	stub7 := Stub{
 		filepath: "stub_7.ibt",
-		header:   headers.NewHeader(nil, nil, nil, sessionNoResultPos),
+		header:   makeHeader(0, nil, now.Add(-60*time.Minute).Unix()),
 	}
 
 	stub8 := Stub{
 		filepath: "stub_8.ibt",
-		header:   headers.NewHeader(nil, nil, nil, sessionResultPos),
+		header:   makeHeader(0, 1, now.Unix()),
 	}
 
 	t.Run("test Group() with regular pattern", func(t *testing.T) {
@@ -303,38 +286,134 @@ func TestGroup(t *testing.T) {
 			t.Errorf("expected length of stub group to be %d. received %d. group: %v", 4, len(grouped), grouped)
 		}
 
-		if grouped[0][1].filepath != "stub_8.ibt" {
-			t.Errorf("expected second item of the first group to have filename %s. received %s", "stub_8.ibt", grouped[0][1].filepath)
+		if grouped[0][1].filepath != "stub_2.ibt" {
+			t.Errorf("expected second item of the first group to have filename %s. received %s", "stub_2.ibt", grouped[0][1].filepath)
 		}
 
-		if grouped[1][2].filepath != "stub_3.ibt" {
-			t.Errorf("expected third item of the second group to have filename %s. received %s", "stub_3.ibt", grouped[1][2].filepath)
+		if grouped[1][1].filepath != "stub_5.ibt" {
+			t.Errorf("expected second item of the second group to have filename %s. received %s", "stub_5.ibt", grouped[1][1].filepath)
 		}
 
-		if grouped[2][1].filepath != "stub_5.ibt" {
-			t.Errorf("expected second item of the third group to have filename %s. received %s", "stub_3.ibt", grouped[1][2].filepath)
+		if grouped[2][0].filepath != "stub_6.ibt" {
+			t.Errorf("expected first item of the third group to have filename %s. received %s", "stub_6.ibt", grouped[2][0].filepath)
+		}
+
+		if grouped[3][1].filepath != "stub_8.ibt" {
+			t.Errorf("expected first item of the third group to have filename %s. received %s", "stub_8.ibt", grouped[3][1].filepath)
 		}
 	})
 
 	t.Run("test groupTestSessionStubs() with irregular pattern", func(t *testing.T) {
-		stubs := StubGroup{stub8, stub7, stub1, stub2, stub3}
+		stubs := StubGroup{stub7, stub8, stub1, stub4, stub5, stub2, stub3, stub6}
 
 		grouped := stubs.Group()
 
-		if len(grouped) != 3 {
-			t.Errorf("expected length of stub group to be %d. received %d. group: %v", 2, len(grouped), grouped)
+		if len(grouped) != 4 {
+			t.Errorf("expected length of stub group to be %d. received %d. group: %v", 4, len(grouped), grouped)
 		}
 
-		if grouped[0][0].filepath != "stub_8.ibt" {
-			t.Errorf("expected first item of the first group to have filename %s. received %s", "stub_8.ibt", grouped[0][0].filepath)
+		if grouped[0][1].filepath != "stub_2.ibt" {
+			t.Errorf("expected second item of the first group to have filename %s. received %s", "stub_2.ibt", grouped[0][1].filepath)
 		}
 
-		if grouped[1][0].filepath != "stub_7.ibt" {
-			t.Errorf("expected first item of the second group to have filename %s. received %s", "stub_7.ibt", grouped[1][0].filepath)
+		if grouped[1][1].filepath != "stub_5.ibt" {
+			t.Errorf("expected second item of the second group to have filename %s. received %s", "stub_5.ibt", grouped[1][1].filepath)
 		}
 
-		if grouped[2][0].filepath != "stub_1.ibt" {
-			t.Errorf("expected first item of the third group to have filename %s. received %s", "stub_1.ibt", grouped[2][0].filepath)
+		if grouped[2][0].filepath != "stub_6.ibt" {
+			t.Errorf("expected first item of the third group to have filename %s. received %s", "stub_6.ibt", grouped[2][0].filepath)
+		}
+
+		if grouped[3][1].filepath != "stub_8.ibt" {
+			t.Errorf("expected first item of the third group to have filename %s. received %s", "stub_8.ibt", grouped[3][1].filepath)
 		}
 	})
 }
+
+func TestStubGroupSorting(t *testing.T) {
+	makeHeader := func(ts int64) headers.Header {
+		return headers.NewHeader(nil, &headers.DiskHeader{StartDate: ts}, nil, nil)
+	}
+
+	t.Run("test stub group sort", func(t *testing.T) {
+		stubGroup := StubGroup{
+			Stub{filepath: "5.ibt", header: makeHeader(time.Now().Unix())},
+			Stub{filepath: "3.ibt", header: makeHeader(time.Now().Add(-120 * time.Minute).Unix())},
+			Stub{filepath: "1.ibt", header: makeHeader(time.Now().Add(-360 * time.Minute).Unix())},
+			Stub{filepath: "4.ibt", header: makeHeader(time.Now().Add(-60 * time.Minute).Unix())},
+			Stub{filepath: "2.ibt", header: makeHeader(time.Now().Add(-240 * time.Minute).Unix())},
+		}
+
+		sort.Sort(stubGroup)
+
+		expectedOrder := []string{"1.ibt", "2.ibt", "3.ibt", "4.ibt", "5.ibt"}
+
+		for idx, item := range expectedOrder {
+			if item != stubGroup[idx].filepath {
+				t.Errorf("item at index %d did not match expected value. expected %s. received %s", idx, item, stubGroup[idx].filepath)
+			}
+		}
+	})
+
+	t.Run("test stub group sort", func(t *testing.T) {
+		now := time.Now()
+
+		stubGroup := StubGroup{
+			Stub{filepath: "5.ibt", header: makeHeader(now.Unix())},
+			Stub{filepath: "3.ibt", header: makeHeader(now.Add(-120 * time.Minute).Unix())},
+			Stub{filepath: "1.ibt", header: makeHeader(now.Add(-360 * time.Minute).Unix())},
+			Stub{filepath: "4.ibt", header: makeHeader(now.Add(-60 * time.Minute).Unix())},
+			Stub{filepath: "2.ibt", header: makeHeader(now.Add(-240 * time.Minute).Unix())},
+		}
+
+		sort.Sort(stubGroup)
+
+		expectedOrder := []string{"1.ibt", "2.ibt", "3.ibt", "4.ibt", "5.ibt"}
+
+		for idx, item := range expectedOrder {
+			if item != stubGroup[idx].filepath {
+				t.Errorf("item at index %d did not match expected value. expected %s. received %s", idx, item, stubGroup[idx].filepath)
+			}
+		}
+	})
+
+	t.Run("test stub group grouping sort", func(t *testing.T) {
+		now := time.Now()
+
+		stubGroup1 := StubGroup{
+			Stub{filepath: "7.ibt", header: makeHeader(now.Add(-60 * time.Minute).Unix())},
+			Stub{filepath: "8.ibt", header: makeHeader(now.Unix())},
+		}
+
+		stubGroup2 := StubGroup{
+			Stub{filepath: "4.ibt", header: makeHeader(now.Add(-240 * time.Minute).Unix())},
+			Stub{filepath: "5.ibt", header: makeHeader(now.Add(-180 * time.Minute).Unix())},
+			Stub{filepath: "6.ibt", header: makeHeader(now.Add(-120 * time.Minute).Unix())},
+		}
+
+		stubGroup3 := StubGroup{
+			Stub{filepath: "1.ibt", header: makeHeader(now.Add(-420 * time.Minute).Unix())},
+			Stub{filepath: "2.ibt", header: makeHeader(now.Add(-360 * time.Minute).Unix())},
+			Stub{filepath: "3.ibt", header: makeHeader(now.Add(-300 * time.Minute).Unix())},
+		}
+
+		stubGroupGrouping := StubGroupGrouping{stubGroup3, stubGroup1, stubGroup2}
+
+		sort.Sort(stubGroupGrouping)
+
+		expectedOrder := []int64{
+			now.Add(-420 * time.Minute).Unix(),
+			now.Add(-240 * time.Minute).Unix(),
+			now.Add(-60 * time.Minute).Unix(),
+		}
+
+		for idx, item := range expectedOrder {
+			if item != stubGroupGrouping[idx][0].Time().Unix() {
+				t.Errorf("item at index %d did not match expected value. expected %d. received %d", idx, item, stubGroupGrouping[idx][0].Time().Unix())
+			}
+		}
+	})
+}
+
+// Order is not always preserved with the slices
+// Check based on length

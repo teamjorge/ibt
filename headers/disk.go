@@ -3,6 +3,7 @@ package headers
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/teamjorge/ibt/utilities"
 )
@@ -51,6 +52,13 @@ func ReadDiskHeader(reader Reader) (*DiskHeader, error) {
 
 	if h.EndTime == 0.0 || h.RecordCount == 0 || h.StartTime == 0 {
 		return nil, fmt.Errorf("invalid disk header detected. values received: %v", h)
+	}
+
+	// Determine if StartDate is an invalid time value
+	parsedTime := time.Unix(h.StartDate, 0)
+	currentYear := time.Now().Year()
+	if parsedTime.Year() < currentYear-20 || currentYear > parsedTime.Year() {
+		return nil, fmt.Errorf("invalid StartDate detected: %v", parsedTime)
 	}
 
 	return &h, nil

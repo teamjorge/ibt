@@ -3,6 +3,7 @@ package headers
 import (
 	"os"
 	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -51,6 +52,39 @@ func TestVarHeaders(t *testing.T) {
 		_, err = ReadVarHeader(f, expectedTelemetryHeader.NumVars, expectedTelemetryHeader.VarHeaderOffset)
 		if err == nil {
 			t.Error("expected telemHeader parsing of empty file to return an error")
+		}
+	})
+}
+
+func TestAvailableVars(t *testing.T) {
+	t.Run("test valid vars", func(t *testing.T) {
+		tVar := map[string]VarHeader{"A": {}, "B": {}}
+
+		availableVars := AvailableVars(tVar)
+		sort.Strings(availableVars)
+
+		if availableVars[0] != "A" && availableVars[1] != "B" {
+			t.Errorf("expected return values to be [A, B], received %v", availableVars)
+		}
+	})
+
+	t.Run("test empty vars map", func(t *testing.T) {
+		tVar := make(map[string]VarHeader)
+
+		availableVars := AvailableVars(tVar)
+
+		if len(availableVars) > 0 {
+			t.Errorf("expected available vars to be empty. received %v", availableVars)
+		}
+	})
+
+	t.Run("test nil vars map", func(t *testing.T) {
+		var tVar map[string]VarHeader = nil
+
+		availableVars := AvailableVars(tVar)
+
+		if len(availableVars) > 0 {
+			t.Errorf("expected available vars to be empty. received %v", availableVars)
 		}
 	})
 }
@@ -2816,37 +2850,4 @@ var expectedVarHeaders = map[string]VarHeader{
 		Unit:        "",
 		Value:       nil,
 	},
-}
-
-func TestAvailableVars(t *testing.T) {
-	t.Run("test valid vars", func(t *testing.T) {
-		tVar := map[string]VarHeader{"A": {}, "B": {}}
-
-		availableVars := AvailableVars(tVar)
-
-		if availableVars[0] != "A" && availableVars[1] != "B" {
-			t.Errorf("expected return values to be [A, B], received %v", availableVars)
-		}
-	})
-
-	t.Run("test empty vars map", func(t *testing.T) {
-		tVar := make(map[string]VarHeader)
-
-		availableVars := AvailableVars(tVar)
-
-		if len(availableVars) > 0 {
-			t.Errorf("expected available vars to be empty. received %v", availableVars)
-		}
-	})
-
-	t.Run("test nil vars map", func(t *testing.T) {
-		var tVar map[string]VarHeader = nil
-
-		availableVars := AvailableVars(tVar)
-
-		if len(availableVars) > 0 {
-			t.Errorf("expected available vars to be empty. received %v", availableVars)
-		}
-	})
-
 }

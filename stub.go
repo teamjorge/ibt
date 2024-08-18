@@ -3,6 +3,7 @@ package ibt
 import (
 	"fmt"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/teamjorge/ibt/headers"
@@ -24,15 +25,10 @@ func (stub *Stub) Filename() string { return stub.filepath }
 func (stub *Stub) Headers() *headers.Header { return &stub.header }
 
 // Time when the stub was created
-func (stub *Stub) Time() (time.Time, error) {
+func (stub *Stub) Time() time.Time {
 	parsedTime := time.Unix(stub.header.DiskHeader().StartDate, 0)
-	currentYear := time.Now().Year()
 
-	if parsedTime.Year() < currentYear-20 || currentYear > parsedTime.Year() {
-		return time.Time{}, fmt.Errorf("invalid time detected from disk header: %v", parsedTime)
-	}
-
-	return parsedTime, nil
+	return parsedTime
 }
 
 // DriverIdx is the index of the current driver.
@@ -96,7 +92,7 @@ func (stubs StubGroup) Group() []StubGroup {
 		sessionStubMap[subSessionId] = append(sessionStubMap[subSessionId], stub)
 	}
 
-	groups := make([]StubGroup, 0)
+	groups := make(StubGroupGrouping, 0)
 	// Groups that have a SubSessionID of 0 are considered as Test sessions and
 	// are grouped using a separate method
 	if testSessionStubGroup, ok := sessionStubMap[0]; ok {
@@ -105,9 +101,12 @@ func (stubs StubGroup) Group() []StubGroup {
 
 	delete(sessionStubMap, 0)
 
-	for _, stub := range sessionStubMap {
-		groups = append(groups, stub)
+	for _, stubGroup := range sessionStubMap {
+		sort.Sort(stubGroup)
+		groups = append(groups, stubGroup)
 	}
+
+	sort.Sort(groups)
 
 	return groups
 }
@@ -119,7 +118,7 @@ func (stubs StubGroup) Group() []StubGroup {
 func groupTestSessionStubs(stubs StubGroup) []StubGroup {
 	groups := make([]StubGroup, 0)
 
-	currentGroup := make([]Stub, 0)
+	currentGroup := make(StubGroup, 0)
 	for _, stub := range stubs {
 		// ResultsPosition nil indicate the first ibt file of a new session
 		if stub.header.SessionInfo().SessionInfo.Sessions[0].ResultsPositions != nil {
@@ -127,15 +126,30 @@ func groupTestSessionStubs(stubs StubGroup) []StubGroup {
 		} else {
 			// Determine if it should end the existing group and create a new one
 			if len(currentGroup) > 0 {
+				sort.Sort(currentGroup)
 				groups = append(groups, currentGroup)
 			}
 			currentGroup = StubGroup{stub}
 		}
 	}
-	// Ensure group contains files
+	// Ensure group contains stubs
 	if len(currentGroup) > 0 {
+		sort.Sort(currentGroup)
 		groups = append(groups, currentGroup)
 	}
 
 	return groups
+}
+
+func (a StubGroup) Len() int           { return len(a) }
+func (a StubGroup) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a StubGroup) Less(i, j int) bool { return a[i].Time().Before(a[j].Time()) }
+
+// StubGroupGrouping is just a group of StubGroups.
+type StubGroupGrouping []StubGroup
+
+func (a StubGroupGrouping) Len() int      { return len(a) }
+func (a StubGroupGrouping) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a StubGroupGrouping) Less(i, j int) bool {
+	return len(a[i]) > 0 && len(a[j]) > 0 && a[i][0].Time().Before(a[j][0].Time())
 }
