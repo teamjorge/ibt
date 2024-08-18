@@ -29,17 +29,17 @@ func TestParser(t *testing.T) {
 		p := NewParser(f, testHeaders, "Speed", "Lap")
 
 		if p.bufferOffset != 53764 {
-			t.Errorf("expected bufferOffset to be %d, recieved: %d", 53764, p.bufferOffset)
+			t.Errorf("expected bufferOffset to be %d, received: %d", 53764, p.bufferOffset)
 		}
 
 		if p.length != 1072 {
-			t.Errorf("expected length to be %d, recieved: %d", 1072, p.length)
+			t.Errorf("expected length to be %d, received: %d", 1072, p.length)
 		}
 
 		expectedWhitelist := []string{"Speed", "Lap"}
 
 		if p.whitelist[0] != expectedWhitelist[0] || p.whitelist[1] != expectedWhitelist[1] {
-			t.Errorf("expected whitelist to be %v, recieved: %v", expectedWhitelist, p.whitelist)
+			t.Errorf("expected whitelist to be %v, received: %v", expectedWhitelist, p.whitelist)
 		}
 
 		if len(p.varHeader) != 276 {

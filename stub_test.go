@@ -104,7 +104,7 @@ func TestParseStubs(t *testing.T) {
 	})
 
 	t.Run("test parseStub non-existent file", func(t *testing.T) {
-		_, err := parseStub(".testing/dissapear_here.ibt")
+		_, err := parseStub(".testing/disappear_here.ibt")
 		if err == nil {
 			t.Error("expected an error from parseStub() when reading an invalid file")
 		}
