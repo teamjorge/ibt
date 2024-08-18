@@ -26,3 +26,28 @@ This package will not parse real-time telemetry as that requires opening a memor
 * Grouping of *ibt* files into the sessions where they originate from.
 * Great test coverage and code documentation.
 * Freedom to use it your own way. Most of what is needed are public functions/methods.
+
+## Examples
+
+Please see the `examples` folder for detailed usage instructions.
+
+To try the examples locally, please clone to repository:
+
+```shell
+git clone https://github.com/teamjorge/ibt
+#or
+git clone git@github.com:teamjorge/ibt.git
+
+cd ibt
+```
+
+To run the example which summarises the track temperature per lap:
+
+```shell
+go run examples/track_temp/main.go
+
+# Or to run it with your own telemetry files
+
+go run examples/track_temp/main.go /path/to/telem/files/*ibt
+```
+
