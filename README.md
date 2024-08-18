@@ -5,7 +5,7 @@
 
 <!-- [![](https://img.shields.io/github/actions/workflow/status/spf13/cobra/test.yml?branch=main&longCache=true&label=Test&logo=github%20actions&logoColor=fff)](https://github.com/spf13/cobra/actions?query=workflow%3ATest) -->
 [![Go Reference](https://pkg.go.dev/badge/github.com/teamjorge/ibt.svg)](https://pkg.go.dev/github.com/teamjorge/ibt)
-[![Go Report Card](https://goreportcard.com/report/github.com/teamjorge/ibt)](https://goreportcard.com/report/github.com/teamjorge/ibt)
+[![Go Report Card](https://goreportcard.com/badge/github.com/teamjorge/ibt)](https://goreportcard.com/report/github.com/teamjorge/ibt)
 
 
 
