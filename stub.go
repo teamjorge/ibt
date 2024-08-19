@@ -78,7 +78,7 @@ func parseStub(filename string) (Stub, error) {
 	return Stub{filename, header}, nil
 }
 
-// Group stubs together by their IRacing session.
+// Group stubs together by their iRacing session.
 //
 // The process for grouping is slightly different for official and test sessions.
 // Official sessions can utilise the SubSessionID, whereas Test sessions
@@ -111,7 +111,7 @@ func (stubs StubGroup) Group() []StubGroup {
 	return groups
 }
 
-// groupTestSessionStubs ensures that ibt files from IRacing Test sessions are grouped correctly.
+// groupTestSessionStubs ensures that ibt files from iRacing Test sessions are grouped correctly.
 //
 // The logic for grouping Test session files is slightly different due to the lack of subSessionIds
 // and rely on the ResultsPosition variable to determine start and end of a group.

@@ -53,7 +53,7 @@ func (s *Session) GetDriver() *Drivers {
 	return nil
 }
 
-// Session in which the ibt file occurred. This represents an actual IRacing session and not just information for a single ibt file.
+// Session in which the ibt file occurred. This represents an actual iRacing session and not just information for a single ibt file.
 type Session struct {
 	CameraInfo    CameraInfo             `yaml:"CameraInfo"`
 	CarSetup      map[string]interface{} `yaml:"CarSetup"`

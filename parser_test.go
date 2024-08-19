@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/teamjorge/ibt/headers"
@@ -36,9 +37,11 @@ func TestParser(t *testing.T) {
 			t.Errorf("expected length to be %d, received: %d", 1072, p.length)
 		}
 
-		expectedWhitelist := []string{"Speed", "Lap"}
+		expectedWhitelist := []string{"Lap", "Speed"}
+		receivedWhitelist := p.whitelist
+		sort.Strings(receivedWhitelist)
 
-		if p.whitelist[0] != expectedWhitelist[0] || p.whitelist[1] != expectedWhitelist[1] {
+		if receivedWhitelist[0] != expectedWhitelist[0] || receivedWhitelist[1] != expectedWhitelist[1] {
 			t.Errorf("expected whitelist to be %v, received: %v", expectedWhitelist, p.whitelist)
 		}
 
@@ -166,4 +169,51 @@ func TestParserRead(t *testing.T) {
 		}
 	})
 
+}
+
+func TestCompareVars(t *testing.T) {
+	t.Run("computeVars() explicit columns", func(t *testing.T) {
+		vars := map[string]headers.VarHeader{
+			"var1": {},
+			"var2": {},
+			"var3": {},
+			"var4": {},
+		}
+
+		receivedVars := computeVars(vars, "var3", "test", "var4")
+		sort.Strings(receivedVars)
+
+		if receivedVars[0] != "var3" && receivedVars[1] != "var4" {
+			t.Errorf("expected vars to equal [%s, %s]. received: %v", "var3", "var4", receivedVars)
+		}
+	})
+
+	t.Run("computeVars() empty", func(t *testing.T) {
+		vars := map[string]headers.VarHeader{
+			"var1": {},
+			"var2": {},
+		}
+
+		receivedVars := computeVars(vars)
+		sort.Strings(receivedVars)
+
+		if receivedVars[0] != "var1" && receivedVars[1] != "var2" {
+			t.Errorf("expected vars to equal [%s, %s]. received: %v", "var1", "var2", receivedVars)
+		}
+	})
+
+	t.Run("computeVars() wildcard", func(t *testing.T) {
+		vars := map[string]headers.VarHeader{
+			"var1": {},
+			"var2": {},
+			"var3": {},
+		}
+
+		receivedVars := computeVars(vars, "*", "test", "*")
+		sort.Strings(receivedVars)
+
+		if receivedVars[0] != "var1" && receivedVars[1] != "var2" && receivedVars[2] != "var3" {
+			t.Errorf("expected vars to equal [%s, %s, %s]. received: %v", "var1", "var2", "var3", receivedVars)
+		}
+	})
 }

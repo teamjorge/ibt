@@ -2,6 +2,7 @@ package ibt
 
 import (
 	"github.com/teamjorge/ibt/headers"
+	"golang.org/x/exp/maps"
 )
 
 // Parser is used to iterate and process telemetry variables for a given ibt file and it's headers.
@@ -26,10 +27,8 @@ func NewParser(reader headers.Reader, header headers.Header, whitelist ...string
 	p := new(Parser)
 
 	p.reader = reader
-	p.whitelist = whitelist
-	if len(p.whitelist) == 0 || p.whitelist[0] == "*" {
-		p.whitelist = headers.AvailableVars(header.VarHeader())
-	}
+	p.whitelist = computeVars(header.VarHeader(), whitelist...)
+
 	p.length = header.TelemetryHeader().BufLen
 	p.bufferOffset = header.TelemetryHeader().BufOffset
 	p.varHeader = header.VarHeader()
@@ -79,4 +78,31 @@ func (p *Parser) read(start int) []byte {
 	}
 
 	return buf
+}
+
+// compareVars will retrieve vars when * is used and ensure a unique list
+//
+// Variables that are not found in the VarHeader will automatically be excluded.
+func computeVars(vars map[string]headers.VarHeader, whitelist ...string) []string {
+	if len(whitelist) == 0 {
+		return headers.AvailableVars(vars)
+	}
+
+	for _, col := range whitelist {
+		if col == "*" {
+			return headers.AvailableVars(vars)
+		}
+	}
+
+	// de-duplicate the columns
+	varMap := make(map[string]struct{})
+
+	for _, col := range whitelist {
+		// ensure it's a valid column
+		if _, ok := vars[col]; ok {
+			varMap[col] = struct{}{}
+		}
+	}
+
+	return maps.Keys(varMap)
 }
