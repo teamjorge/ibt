@@ -80,6 +80,9 @@ func ReadVarHeader(reader Reader, numVars, offset int) (map[string]VarHeader, er
 	return varHeaders, nil
 }
 
+// AvailableVars for each tick of telemetry data.
+//
+// This is useful when determining which variables are available for a specific car.
 func AvailableVars(varHeaders map[string]VarHeader) []string {
 	return maps.Keys(varHeaders)
 }
