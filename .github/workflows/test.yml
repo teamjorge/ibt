@@ -37,6 +37,9 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
 
+    - name: Build Examples
+      run: go build ./examples/...
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
