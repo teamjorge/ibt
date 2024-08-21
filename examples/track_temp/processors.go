@@ -19,6 +19,7 @@ type trackTempProcessor struct {
 func newTrackTempProcessor() *trackTempProcessor {
 	t := new(trackTempProcessor)
 
+	// tempMap will store a temperature value against a lap number
 	t.tempMap = make(map[int]float32)
 
 	return t
