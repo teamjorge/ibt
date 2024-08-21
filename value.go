@@ -63,7 +63,7 @@ func readVarValue(buf []byte, vh headers.VarHeader) interface{} {
 		switch vh.Rtype {
 		case 0:
 			rbuf = buf[offset : offset+1]
-			value = rbuf[0]
+			value = uint8(rbuf[0])
 		case 1:
 			rbuf = buf[offset : offset+1]
 			value = int(rbuf[0]) > 0
