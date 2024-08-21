@@ -2,7 +2,6 @@ package ibt
 
 import (
 	"github.com/teamjorge/ibt/headers"
-	"golang.org/x/exp/maps"
 )
 
 // Parser is used to iterate and process telemetry variables for a given ibt file and it's headers.
@@ -27,7 +26,7 @@ func NewParser(reader headers.Reader, header headers.Header, whitelist ...string
 	p := new(Parser)
 
 	p.reader = reader
-	p.whitelist = computeVars(header.VarHeader(), whitelist...)
+	p.whitelist = whitelist
 
 	p.length = header.TelemetryHeader().BufLen
 	p.bufferOffset = header.TelemetryHeader().BufOffset
@@ -43,7 +42,7 @@ func NewParser(reader headers.Reader, header headers.Header, whitelist ...string
 // a nil and false will be returned.
 //
 // Should expected variable values be missing, please ensure that they are added to the Parser whitelist.
-func (p *Parser) Next() (map[string]headers.VarHeader, bool) {
+func (p *Parser) Next() (Tick, bool) {
 	start := p.bufferOffset + (p.current * p.length)
 	currentBuf := p.read(start)
 	if currentBuf == nil {
@@ -54,13 +53,12 @@ func (p *Parser) Next() (map[string]headers.VarHeader, bool) {
 	nextStart := p.bufferOffset + ((p.current + 1) * p.length)
 	nextBuf := p.read(nextStart)
 
-	newVars := make(map[string]headers.VarHeader)
+	newVars := make(Tick)
 
 	for _, variable := range p.whitelist {
 		item := p.varHeader[variable]
 		val := readVarValue(currentBuf, item)
-		item.Value = val
-		newVars[variable] = item
+		newVars[variable] = val
 	}
 
 	p.current++
@@ -78,31 +76,4 @@ func (p *Parser) read(start int) []byte {
 	}
 
 	return buf
-}
-
-// compareVars will retrieve vars when * is used and ensure a unique list
-//
-// Variables that are not found in the VarHeader will automatically be excluded.
-func computeVars(vars map[string]headers.VarHeader, whitelist ...string) []string {
-	if len(whitelist) == 0 {
-		return headers.AvailableVars(vars)
-	}
-
-	for _, col := range whitelist {
-		if col == "*" {
-			return headers.AvailableVars(vars)
-		}
-	}
-
-	// de-duplicate the columns
-	varMap := make(map[string]struct{})
-
-	for _, col := range whitelist {
-		// ensure it's a valid column
-		if _, ok := vars[col]; ok {
-			varMap[col] = struct{}{}
-		}
-	}
-
-	return maps.Keys(varMap)
 }

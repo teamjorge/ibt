@@ -49,19 +49,6 @@ func TestParser(t *testing.T) {
 			t.Errorf("expected varHeader to be of length %d, actual: %d", 276, len(p.varHeader))
 		}
 	})
-
-	t.Run("test NewParser wildcard or null whitelist", func(t *testing.T) {
-		p := NewParser(f, testHeaders, "*")
-
-		if len(p.whitelist) != 276 {
-			t.Errorf("expected whitelist to be of length %d, actual: %d", 278, len(p.whitelist))
-		}
-
-		p = NewParser(f, testHeaders)
-		if len(p.whitelist) != 276 {
-			t.Errorf("expected whitelist to be of length %d, actual: %d", 278, len(p.whitelist))
-		}
-	})
 }
 
 func TestParserNext(t *testing.T) {
@@ -89,8 +76,8 @@ func TestParserNext(t *testing.T) {
 
 		for idx, expectedValue := range expectedValues {
 			vars, next := p.Next()
-			if vars["LapCurrentLapTime"].Value != expectedValue {
-				t.Errorf("expected LapCurrentLapTime value to equal %f, got %f", expectedValue, vars["LapCurrentLapTime"].Value)
+			if vars["LapCurrentLapTime"] != expectedValue {
+				t.Errorf("expected LapCurrentLapTime value to equal %f, got %f", expectedValue, vars["LapCurrentLapTime"])
 			}
 			if !next {
 				t.Errorf("expected additional var values to be available after iteration %d", idx)
@@ -105,8 +92,8 @@ func TestParserNext(t *testing.T) {
 
 		p.current = 388
 		vars, next := p.Next()
-		if vars["LapCurrentLapTime"].Value != expectedValue1 {
-			t.Errorf("expected LapCurrentLapTime value to equal %f, got %f", expectedValue1, vars["LapCurrentLapTime"].Value)
+		if vars["LapCurrentLapTime"] != expectedValue1 {
+			t.Errorf("expected LapCurrentLapTime value to equal %f, got %f", expectedValue1, vars["LapCurrentLapTime"])
 		}
 		if !next {
 			t.Error("expected additional var values to be available after iteration")
@@ -114,8 +101,8 @@ func TestParserNext(t *testing.T) {
 
 		expectedValue2 := float32(44.145233)
 		vars, next = p.Next()
-		if vars["LapCurrentLapTime"].Value != expectedValue2 {
-			t.Errorf("expected LapCurrentLapTime value to equal %f, got %f", expectedValue2, vars["LapCurrentLapTime"].Value)
+		if vars["LapCurrentLapTime"] != expectedValue2 {
+			t.Errorf("expected LapCurrentLapTime value to equal %f, got %f", expectedValue2, vars["LapCurrentLapTime"])
 		}
 		if next {
 			t.Error("expected no more var values to be available after iteration")
@@ -169,51 +156,4 @@ func TestParserRead(t *testing.T) {
 		}
 	})
 
-}
-
-func TestCompareVars(t *testing.T) {
-	t.Run("computeVars() explicit columns", func(t *testing.T) {
-		vars := map[string]headers.VarHeader{
-			"var1": {},
-			"var2": {},
-			"var3": {},
-			"var4": {},
-		}
-
-		receivedVars := computeVars(vars, "var3", "test", "var4")
-		sort.Strings(receivedVars)
-
-		if receivedVars[0] != "var3" && receivedVars[1] != "var4" {
-			t.Errorf("expected vars to equal [%s, %s]. received: %v", "var3", "var4", receivedVars)
-		}
-	})
-
-	t.Run("computeVars() empty", func(t *testing.T) {
-		vars := map[string]headers.VarHeader{
-			"var1": {},
-			"var2": {},
-		}
-
-		receivedVars := computeVars(vars)
-		sort.Strings(receivedVars)
-
-		if receivedVars[0] != "var1" && receivedVars[1] != "var2" {
-			t.Errorf("expected vars to equal [%s, %s]. received: %v", "var1", "var2", receivedVars)
-		}
-	})
-
-	t.Run("computeVars() wildcard", func(t *testing.T) {
-		vars := map[string]headers.VarHeader{
-			"var1": {},
-			"var2": {},
-			"var3": {},
-		}
-
-		receivedVars := computeVars(vars, "*", "test", "*")
-		sort.Strings(receivedVars)
-
-		if receivedVars[0] != "var1" && receivedVars[1] != "var2" && receivedVars[2] != "var3" {
-			t.Errorf("expected vars to equal [%s, %s, %s]. received: %v", "var1", "var2", "var3", receivedVars)
-		}
-	})
 }
