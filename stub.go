@@ -18,6 +18,16 @@ type Stub struct {
 	header   headers.Header
 }
 
+// Open the underlying ibt file for reading
+func (stub *Stub) Open() (headers.Reader, error) {
+	reader, err := os.Open(stub.Filename())
+	if err != nil {
+		return nil, fmt.Errorf("failed to open stub file %s for reading: %v", stub.Filename(), err)
+	}
+
+	return reader, nil
+}
+
 // Filename where the stub originated from
 func (stub *Stub) Filename() string { return stub.filepath }
 

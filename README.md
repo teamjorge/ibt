@@ -26,11 +26,11 @@ This package will not parse real-time telemetry as that requires opening a memor
 * Quick parsing of file metadata.
 * Grouping of *ibt* files into the sessions where they originate from.
 * Great test coverage and code documentation.
-* Freedom to use it your own way. Most of what is needed are public functions/methods.
+* Freedom to use it your own way. Most functions/methods has been made public.
 
 ## Examples
 
-Please see the `examples` folder for detailed usage instructions.
+Please see the [`examples`](https://github.com/teamjorge/ibt/tree/main/examples) folder for detailed usage instructions.
 
 To try the examples locally, please clone to repository:
 
@@ -49,6 +49,6 @@ go run examples/track_temp/main.go
 
 # Or to run it with your own telemetry files
 
-go run examples/track_temp/main.go /path/to/telem/files/*ibt
+go run examples/track_temp/main.go /path/to/telem/files/*.ibt
 ```
 

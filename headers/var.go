@@ -17,10 +17,10 @@ type VarHeader struct {
 	// Rtype is the variable value type.
 	//
 	// Possible values:
-	// 0: String
+	// 0: Uint8
 	// 1: Boolean
 	// 2: Int
-	// 3: Byte
+	// 3: String
 	// 4: Float32
 	// 5: Float64
 	Rtype int `json:"rtype,omitempty"`
