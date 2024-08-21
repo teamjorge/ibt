@@ -30,25 +30,14 @@ This package will not parse real-time telemetry as that requires opening a memor
 
 ## Examples
 
-Please see the [`examples`](https://github.com/teamjorge/ibt/tree/main/examples) folder for detailed usage instructions.
+The [Examples](https://github.com/teamjorge/ibt/tree/main/examples) directory houses all of the available examples.
 
-To try the examples locally, please clone to repository:
+To try these examples locally, please clone to repository:
 
 ```shell
 git clone https://github.com/teamjorge/ibt
 #or
 git clone git@github.com:teamjorge/ibt.git
-
-cd ibt
 ```
 
-To run the example which summarises the track temperature per lap:
-
-```shell
-go run examples/track_temp/main.go
-
-# Or to run it with your own telemetry files
-
-go run examples/track_temp/main.go /path/to/telem/files/*.ibt
-```
-
+Please have a look at the instructors in the examples [`README`](./examples/README.md) for details on how to run each example.
