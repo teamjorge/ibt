@@ -1,6 +1,7 @@
 package ibt
 
 import (
+	"bytes"
 	"os"
 	"reflect"
 	"sort"
@@ -64,6 +65,33 @@ func TestStubs(t *testing.T) {
 
 		if driverIdxStub.DriverIdx() != 15 {
 			t.Errorf("expected driver idx to be 15, but got %d", driverIdxStub.DriverIdx())
+		}
+	})
+
+	t.Run("stubs Open() valid file", func(t *testing.T) {
+		stub := Stub{filepath: ".testing/valid_test_file.ibt"}
+
+		f, err := stub.Open()
+		if err != nil {
+			t.Errorf("did not expect an error when opening file %s. received: %v", ".testing/valid_test_file.ibt", err)
+		}
+
+		buf := make([]byte, 2)
+		if _, err := f.Read(buf); err != nil {
+			t.Errorf("did not expect an error when reading 2 bytes from file %s. received: %v", ".testing/valid_test_file.ibt", err)
+		}
+
+		if !bytes.Equal(buf, []byte{0x2, 0x0}) {
+			t.Errorf("expected buf to be %v. received %v", []byte{0x2, 0x0}, buf)
+		}
+	})
+
+	t.Run("stubs Open() invalid file", func(t *testing.T) {
+		stub := Stub{filepath: ".testing/disappear_here.ibt"}
+
+		_, err := stub.Open()
+		if err == nil {
+			t.Errorf("expected an error when opening a non-existent file %s", ".testing/disappear_here.ibt")
 		}
 	})
 }
