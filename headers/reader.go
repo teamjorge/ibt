@@ -8,5 +8,4 @@ type Reader interface {
 	io.ReaderAt
 	io.Closer
 	io.ReadSeeker
-	io.ReaderFrom
 }
