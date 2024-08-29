@@ -2,7 +2,6 @@ package headers
 
 import (
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/teamjorge/ibt/utilities"
@@ -37,7 +36,7 @@ type DiskHeader struct {
 func ReadDiskHeader(reader Reader) (*DiskHeader, error) {
 	diskHeaderBuf := make([]byte, DISK_HEADER_BYTES_SIZE)
 
-	_, err := io.ReadAtLeast(reader, diskHeaderBuf, DISK_HEADER_BYTES_SIZE)
+	_, err := reader.ReadAt(diskHeaderBuf, int64(TELEMETRY_HEADER_BYTES_SIZE))
 	if err != nil {
 		return nil, err
 	}
