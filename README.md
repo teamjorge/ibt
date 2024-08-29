@@ -4,11 +4,9 @@
 
 ![ibt logo](assets/ibt_mascot.png)
 
-
 [![Go Reference](https://pkg.go.dev/badge/github.com/teamjorge/ibt.svg)](https://pkg.go.dev/github.com/teamjorge/ibt)
 [![Go Report Card](https://goreportcard.com/badge/github.com/teamjorge/ibt)](https://goreportcard.com/report/github.com/teamjorge/ibt)
 [![codecov](https://codecov.io/gh/teamjorge/ibt/branch/main/graph/badge.svg?token=08QVKSEPXT)](https://codecov.io/gh/teamjorge/ibt)
-
 
 ## Install
 
@@ -40,4 +38,4 @@ git clone https://github.com/teamjorge/ibt
 git clone git@github.com:teamjorge/ibt.git
 ```
 
-Please have a look at the instructors in the examples [`README`](./examples/README.md) for details on how to run each example.
+Please have a look at the instructions in the examples [`README`](./examples/README.md) for details on how to run each example.
