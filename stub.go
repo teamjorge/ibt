@@ -15,7 +15,7 @@ import (
 // to make decisions regarding which files should have their telemetry parsed.
 type Stub struct {
 	filepath string
-	header   headers.Header
+	header   *headers.Header
 }
 
 // Open the underlying ibt file for reading
@@ -32,11 +32,11 @@ func (stub *Stub) Open() (headers.Reader, error) {
 func (stub *Stub) Filename() string { return stub.filepath }
 
 // Headers that were parsed when the stub was created
-func (stub *Stub) Headers() *headers.Header { return &stub.header }
+func (stub *Stub) Headers() *headers.Header { return stub.header }
 
 // Time when the stub was created
 func (stub *Stub) Time() time.Time {
-	parsedTime := time.Unix(stub.header.DiskHeader().StartDate, 0)
+	parsedTime := time.Unix(stub.header.DiskHeader.StartDate, 0)
 
 	return parsedTime
 }
@@ -46,7 +46,7 @@ func (stub *Stub) Time() time.Time {
 // This value is useful when parsing telemetry or session info where the index of the driver
 // is required.
 func (stub *Stub) DriverIdx() int {
-	return stub.header.SessionInfo().DriverInfo.DriverCarIdx
+	return stub.header.SessionInfo.DriverInfo.DriverCarIdx
 }
 
 // StubGroup is a grouping of stubs.
@@ -98,7 +98,7 @@ func (stubs StubGroup) Group() []StubGroup {
 
 	// Group stubs of the same SubSessionID together
 	for _, stub := range stubs {
-		subSessionId := stub.header.SessionInfo().WeekendInfo.SubSessionID
+		subSessionId := stub.header.SessionInfo.WeekendInfo.SubSessionID
 		sessionStubMap[subSessionId] = append(sessionStubMap[subSessionId], stub)
 	}
 
@@ -131,7 +131,7 @@ func groupTestSessionStubs(stubs StubGroup) []StubGroup {
 	currentGroup := make(StubGroup, 0)
 	for _, stub := range stubs {
 		// ResultsPosition nil indicate the first ibt file of a new session
-		if stub.header.SessionInfo().SessionInfo.Sessions[0].ResultsPositions != nil {
+		if stub.header.SessionInfo.SessionInfo.Sessions[0].ResultsPositions != nil {
 			currentGroup = append(currentGroup, stub)
 		} else {
 			// Determine if it should end the existing group and create a new one

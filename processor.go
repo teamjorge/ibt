@@ -36,7 +36,7 @@ func process(ctx context.Context, stub Stub, processors ...Processor) error {
 
 	header := stub.header
 
-	whitelist := buildWhitelist(header.VarHeader(), processors...)
+	whitelist := buildWhitelist(header.VarHeader, processors...)
 
 	parser := NewParser(reader, header, whitelist...)
 	for {
@@ -48,7 +48,7 @@ func process(ctx context.Context, stub Stub, processors ...Processor) error {
 
 		tick, hasNext := parser.Next()
 		for _, proc := range processors {
-			if err := proc.Process(tick.Filter(proc.Whitelist()...), hasNext, header.SessionInfo()); err != nil {
+			if err := proc.Process(tick.Filter(proc.Whitelist()...), hasNext, header.SessionInfo); err != nil {
 				return err
 			}
 		}

@@ -40,7 +40,7 @@ func TestStubs(t *testing.T) {
 	t.Run("stubs Headers()", func(t *testing.T) {
 		h := testStub.Headers()
 
-		if reflect.DeepEqual(h, header) {
+		if !reflect.DeepEqual(h, header) {
 			t.Errorf("expected %v = %v", h, header)
 		}
 	})
@@ -48,20 +48,21 @@ func TestStubs(t *testing.T) {
 	t.Run("stubs Time() valid time", func(t *testing.T) {
 		parsedTime := testStub.Time()
 
-		expectedTime, _ := time.Parse("2006-01-02 15:04:05", "2024-06-24 16:02:03")
-		if parsedTime.Equal(expectedTime) {
-			t.Errorf("expected time to be %v but got %v", expectedTime, parsedTime)
+		expectedTime, _ := time.Parse("2006-01-02 15:04:05", "2024-06-24 19:45:36")
+		if !parsedTime.Equal(expectedTime) {
+			t.Errorf("expected time to be %v but got %v", expectedTime.UTC(), parsedTime.UTC())
 		}
 	})
 
 	t.Run("stubs DriverIdx()", func(t *testing.T) {
-		h := headers.NewHeader(
-			&headers.TelemetryHeader{},
-			&headers.DiskHeader{},
-			map[string]headers.VarHeader{},
-			&headers.Session{DriverInfo: headers.DriverInfo{DriverCarIdx: 15}})
+		h := headers.Header{
+			TelemetryHeader: &headers.TelemetryHeader{},
+			DiskHeader:      &headers.DiskHeader{},
+			VarHeader:       map[string]headers.VarHeader{},
+			SessionInfo:     &headers.Session{DriverInfo: headers.DriverInfo{DriverCarIdx: 15}},
+		}
 
-		driverIdxStub := Stub{filepath: ".testing/valid_test_file.ibt", header: h}
+		driverIdxStub := Stub{filepath: ".testing/valid_test_file.ibt", header: &h}
 
 		if driverIdxStub.DriverIdx() != 15 {
 			t.Errorf("expected driver idx to be 15, but got %d", driverIdxStub.DriverIdx())
@@ -107,20 +108,20 @@ func TestParseStubs(t *testing.T) {
 			t.Errorf("expected parsedStub to have a filepath of .testing/valid_test_file.ibt. received: %s", parsedStub.filepath)
 		}
 
-		if parsedStub.header.TelemetryHeader().BufOffset != 53764 {
-			t.Errorf("expected parsedStub to have a BufOffset of %d. received: %d", 53764, parsedStub.header.TelemetryHeader().BufOffset)
+		if parsedStub.header.TelemetryHeader.BufOffset != 53764 {
+			t.Errorf("expected parsedStub to have a BufOffset of %d. received: %d", 53764, parsedStub.header.TelemetryHeader.BufOffset)
 		}
 
-		if parsedStub.header.DiskHeader().StartDate != 1719258336 {
-			t.Errorf("expected parsedStub to have a StartDate of %d. received: %d", 1719258336, parsedStub.header.DiskHeader().StartDate)
+		if parsedStub.header.DiskHeader.StartDate != 1719258336 {
+			t.Errorf("expected parsedStub to have a StartDate of %d. received: %d", 1719258336, parsedStub.header.DiskHeader.StartDate)
 		}
 
-		if parsedStub.header.SessionInfo().DriverInfo.DriverCarVersion != "2024.05.28.02" {
-			t.Errorf("expected parsedStub to have a DriverCarVersion of %s. received: %s", "2024.05.28.02", parsedStub.header.SessionInfo().DriverInfo.DriverCarVersion)
+		if parsedStub.header.SessionInfo.DriverInfo.DriverCarVersion != "2024.05.28.02" {
+			t.Errorf("expected parsedStub to have a DriverCarVersion of %s. received: %s", "2024.05.28.02", parsedStub.header.SessionInfo.DriverInfo.DriverCarVersion)
 		}
 
-		if len(parsedStub.header.VarHeader()) != 276 {
-			t.Errorf("expected parsedStub to have a %d VarHeaders. received: %d", 276, len(parsedStub.header.VarHeader()))
+		if len(parsedStub.header.VarHeader) != 276 {
+			t.Errorf("expected parsedStub to have a %d VarHeaders. received: %d", 276, len(parsedStub.header.VarHeader))
 		}
 	})
 
@@ -152,20 +153,20 @@ func TestParseStubs(t *testing.T) {
 			t.Errorf("expected the parsed stub to have a filepath of .testing/valid_test_file.ibt. received: %s", parsedStubs[1].filepath)
 		}
 
-		if parsedStubs[0].header.TelemetryHeader().BufOffset != 53764 {
-			t.Errorf("expected the parsed stub to have a BufOffset of %d. received: %d", 53764, parsedStubs[0].header.TelemetryHeader().BufOffset)
+		if parsedStubs[0].header.TelemetryHeader.BufOffset != 53764 {
+			t.Errorf("expected the parsed stub to have a BufOffset of %d. received: %d", 53764, parsedStubs[0].header.TelemetryHeader.BufOffset)
 		}
 
-		if parsedStubs[1].header.DiskHeader().StartDate != 1719258336 {
-			t.Errorf("expected the parsed stub to have a StartDate of %d. received: %d", 1719258336, parsedStubs[1].header.DiskHeader().StartDate)
+		if parsedStubs[1].header.DiskHeader.StartDate != 1719258336 {
+			t.Errorf("expected the parsed stub to have a StartDate of %d. received: %d", 1719258336, parsedStubs[1].header.DiskHeader.StartDate)
 		}
 
-		if parsedStubs[0].header.SessionInfo().DriverInfo.DriverCarVersion != "2024.05.28.02" {
-			t.Errorf("expected the parsed stub to have a DriverCarVersion of %s. received: %s", "2024.05.28.02", parsedStubs[0].header.SessionInfo().DriverInfo.DriverCarVersion)
+		if parsedStubs[0].header.SessionInfo.DriverInfo.DriverCarVersion != "2024.05.28.02" {
+			t.Errorf("expected the parsed stub to have a DriverCarVersion of %s. received: %s", "2024.05.28.02", parsedStubs[0].header.SessionInfo.DriverInfo.DriverCarVersion)
 		}
 
-		if len(parsedStubs[1].header.VarHeader()) != 276 {
-			t.Errorf("expected the parsed stub to have a %d VarHeaders. received: %d", 276, len(parsedStubs[1].header.VarHeader()))
+		if len(parsedStubs[1].header.VarHeader) != 276 {
+			t.Errorf("expected the parsed stub to have a %d VarHeaders. received: %d", 276, len(parsedStubs[1].header.VarHeader))
 		}
 	})
 
@@ -179,20 +180,23 @@ func TestParseStubs(t *testing.T) {
 			t.Errorf("expected %d stubs to be parsed. found %d. parsed stubs: %v", 1, len(parsedStubs), parsedStubs)
 		}
 
-		if parsedStubs[0].header.TelemetryHeader().BufOffset != 53764 {
-			t.Errorf("expected the parsed stub to have a BufOffset of %d. received: %d", 53764, parsedStubs[0].header.TelemetryHeader().BufOffset)
+		if parsedStubs[0].header.TelemetryHeader.BufOffset != 53764 {
+			t.Errorf("expected the parsed stub to have a BufOffset of %d. received: %d", 53764, parsedStubs[0].header.TelemetryHeader.BufOffset)
 		}
 	})
 }
 
 func TestGroupTestSessionStubs(t *testing.T) {
-	makeHeader := func(subSessionId int, ResultsPositions interface{}, ts int64) headers.Header {
-		return headers.NewHeader(
-			nil,
-			&headers.DiskHeader{StartDate: ts},
-			nil,
-			&headers.Session{WeekendInfo: headers.WeekendInfo{SubSessionID: subSessionId}, SessionInfo: headers.SessionInfo{Sessions: []headers.Sessions{{ResultsPositions: ResultsPositions}}}},
-		)
+	makeHeader := func(subSessionId int, ResultsPositions interface{}, ts int64) *headers.Header {
+		return &headers.Header{
+			DiskHeader: &headers.DiskHeader{StartDate: ts},
+			SessionInfo: &headers.Session{
+				WeekendInfo: headers.WeekendInfo{SubSessionID: subSessionId},
+				SessionInfo: headers.SessionInfo{
+					Sessions: []headers.Sessions{{ResultsPositions: ResultsPositions}},
+				},
+			},
+		}
 	}
 
 	now := time.Now()
@@ -254,13 +258,18 @@ func TestGroupTestSessionStubs(t *testing.T) {
 }
 
 func TestGroup(t *testing.T) {
-	makeHeader := func(subSessionId int, ResultsPositions interface{}, ts int64) headers.Header {
-		return headers.NewHeader(
-			nil,
-			&headers.DiskHeader{StartDate: ts},
-			nil,
-			&headers.Session{WeekendInfo: headers.WeekendInfo{SubSessionID: subSessionId}, SessionInfo: headers.SessionInfo{Sessions: []headers.Sessions{{ResultsPositions: ResultsPositions}}}},
-		)
+	makeHeader := func(subSessionId int, ResultsPositions interface{}, ts int64) *headers.Header {
+		return &headers.Header{
+			DiskHeader: &headers.DiskHeader{StartDate: ts},
+			SessionInfo: &headers.Session{
+				WeekendInfo: headers.WeekendInfo{SubSessionID: subSessionId},
+				SessionInfo: headers.SessionInfo{
+					Sessions: []headers.Sessions{
+						{ResultsPositions: ResultsPositions},
+					},
+				},
+			},
+		}
 	}
 
 	now := time.Now()
@@ -359,8 +368,8 @@ func TestGroup(t *testing.T) {
 }
 
 func TestStubGroupSorting(t *testing.T) {
-	makeHeader := func(ts int64) headers.Header {
-		return headers.NewHeader(nil, &headers.DiskHeader{StartDate: ts}, nil, nil)
+	makeHeader := func(ts int64) *headers.Header {
+		return &headers.Header{DiskHeader: &headers.DiskHeader{StartDate: ts}}
 	}
 
 	t.Run("test stub group sort", func(t *testing.T) {

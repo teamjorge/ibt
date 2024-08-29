@@ -115,7 +115,7 @@ func TestWhitelistParsing(t *testing.T) {
 		return
 	}
 
-	varHeader := testHeaders.VarHeader()
+	varHeader := testHeaders.VarHeader
 
 	t.Run("test parseAndValidateWhitelist empty", func(t *testing.T) {
 		proc := testProcessor{whitelist: []string{}}
