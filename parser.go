@@ -6,12 +6,13 @@ import (
 
 // Parser is used to iterate and process telemetry variables for a given ibt file and it's headers.
 type Parser struct {
-	reader       headers.Reader
-	varHeader    map[string]headers.VarHeader
-	whitelist    []string
-	length       int
-	bufferOffset int
-	current      int
+	// File or Live Telemetry reader
+	reader headers.Reader
+	// List of columns to parse
+	whitelist []string
+	header    *headers.Header
+
+	current int
 }
 
 // NewParser creates a new parser from a given ibt file, it's headers, and a variable whitelist.
@@ -22,15 +23,13 @@ type Parser struct {
 //
 // whitelist - Variables to process. For example, "gear", "speed", "rpm" etc. If no values or a
 // single value of "*" is received, all variables will be processed.
-func NewParser(reader headers.Reader, header headers.Header, whitelist ...string) *Parser {
+func NewParser(reader headers.Reader, header *headers.Header, whitelist ...string) *Parser {
 	p := new(Parser)
 
 	p.reader = reader
 	p.whitelist = whitelist
+	p.header = header
 
-	p.length = header.TelemetryHeader().BufLen
-	p.bufferOffset = header.TelemetryHeader().BufOffset
-	p.varHeader = header.VarHeader()
 	p.current = 1
 
 	return p
@@ -43,32 +42,42 @@ func NewParser(reader headers.Reader, header headers.Header, whitelist ...string
 //
 // Should expected variable values be missing, please ensure that they are added to the Parser whitelist.
 func (p *Parser) Next() (Tick, bool) {
-	start := p.bufferOffset + (p.current * p.length)
+	start := p.header.TelemetryHeader.BufOffset + (p.current * p.header.TelemetryHeader.BufLen)
+
 	currentBuf := p.read(start)
 	if currentBuf == nil {
 		return nil, false
 	}
 
 	// Read in the next buffer to determine if more telemetry ticks are available.
-	nextStart := p.bufferOffset + ((p.current + 1) * p.length)
+	nextStart := p.header.TelemetryHeader.BufOffset + ((p.current + 1) * p.header.TelemetryHeader.BufLen)
 	nextBuf := p.read(nextStart)
 
-	newVars := make(Tick)
-
-	for _, variable := range p.whitelist {
-		item := p.varHeader[variable]
-		val := readVarValue(currentBuf, item)
-		newVars[variable] = val
-	}
+	newVars := p.readVarsFromBuffer(currentBuf)
 
 	p.current++
 
 	return newVars, nextBuf != nil
 }
 
-// read the next buffer from offset to the current length set by the parser
+// ParseAt the given buffer offset and return a processed tick.
+//
+// ParseAt is useful if a specific offset is known. An example would be the
+// telemetry variable buffers that are provided during live telemetry parsing.
+func (p *Parser) ParseAt(offset int) Tick {
+	currentBuf := p.read(offset)
+	if currentBuf == nil {
+		return nil
+	}
+
+	newVars := p.readVarsFromBuffer(currentBuf)
+
+	return newVars
+}
+
+// read the next buffer from offset to the current length set by the parser.
 func (p *Parser) read(start int) []byte {
-	buf := make([]byte, p.length)
+	buf := make([]byte, p.header.TelemetryHeader.BufLen)
 	_, err := p.reader.ReadAt(buf, int64(start))
 	if err != nil {
 		defer p.reader.Close()
@@ -76,4 +85,25 @@ func (p *Parser) read(start int) []byte {
 	}
 
 	return buf
+}
+
+// readVarsFromBuffer reads each of the specified (whitelist) fields from the given buffer into a new Tick.
+func (p *Parser) readVarsFromBuffer(buf []byte) Tick {
+	newVars := make(Tick)
+
+	for _, variable := range p.whitelist {
+		item := p.header.VarHeader[variable]
+		val := readVarValue(buf, item)
+		newVars[variable] = val
+	}
+
+	return newVars
+}
+
+// Seek the parser to a specific tick within the ibt file.
+func (p *Parser) Seek(iter int) { p.current = iter }
+
+// UpdateWhitelist replaces the current whitelist with the given fields
+func (p *Parser) UpdateWhitelist(whitelist ...string) {
+	p.whitelist = whitelist
 }
