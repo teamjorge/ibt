@@ -7,10 +7,11 @@ import (
 )
 
 var expectedHeader = Header{
-	telemHeader: &expectedTelemetryHeader,
-	diskHeader:  &expectedDiskHeader,
-	sessionInfo: &expectedSessionInfo,
-	varHeader:   expectedVarHeaders,
+	TelemetryHeader: &expectedTelemetryHeader,
+	DiskHeader:      &expectedDiskHeader,
+	VarHeader:       expectedVarHeaders,
+	SessionInfo:     &expectedSessionInfo,
+	VarBuffers:      expectedVarBuffers,
 }
 
 func TestHeaders(t *testing.T) {
@@ -28,20 +29,24 @@ func TestHeaders(t *testing.T) {
 			return
 		}
 
-		if !reflect.DeepEqual(expectedHeader.TelemetryHeader(), output.telemHeader) {
-			t.Errorf("expected header telemetryHeader does not match actual. \nexpected: %+v\n \nactual: %+v\n", expectedHeader.telemHeader, output.telemHeader)
+		if !reflect.DeepEqual(expectedHeader.TelemetryHeader, output.TelemetryHeader) {
+			t.Errorf("expected header telemetryHeader does not match actual. \nexpected: %+v\n \nactual: %+v\n", expectedHeader.TelemetryHeader, output.TelemetryHeader)
 		}
 
-		if !reflect.DeepEqual(expectedHeader.DiskHeader(), output.diskHeader) {
-			t.Errorf("expected header diskHeader does not match actual. \nexpected: %+v\n \nactual: %+v\n", expectedHeader.diskHeader, output.diskHeader)
+		if !reflect.DeepEqual(expectedHeader.DiskHeader, output.DiskHeader) {
+			t.Errorf("expected header diskHeader does not match actual. \nexpected: %+v\n \nactual: %+v\n", expectedHeader.DiskHeader, output.DiskHeader)
 		}
 
-		if !reflect.DeepEqual(expectedHeader.SessionInfo(), output.sessionInfo) {
-			t.Errorf("expected header sessionInfo does not match actual. \nexpected: %+v\n \nactual: %+v\n", expectedHeader.sessionInfo, output.sessionInfo)
+		if !reflect.DeepEqual(expectedHeader.SessionInfo, output.SessionInfo) {
+			t.Errorf("expected header sessionInfo does not match actual. \nexpected: %+v\n \nactual: %+v\n", expectedHeader.SessionInfo, output.SessionInfo)
 		}
 
-		if !reflect.DeepEqual(expectedHeader.VarHeader(), output.varHeader) {
-			t.Errorf("expected header varHeader does not match actual. \nexpected: %+v\n \nactual: %+v\n", expectedHeader.varHeader, output.varHeader)
+		if !reflect.DeepEqual(expectedHeader.VarHeader, output.VarHeader) {
+			t.Errorf("expected header varHeader does not match actual. \nexpected: %+v\n \nactual: %+v\n", expectedHeader.VarHeader, output.VarHeader)
+		}
+
+		if !reflect.DeepEqual(expectedHeader.VarBuffers[0], output.VarBuffers[0]) {
+			t.Errorf("expected varBuffer header does not match actual. \nexpected: %+v\n \nactual: %+v\n", expectedHeader.VarBuffers[0], output.VarBuffers[0])
 		}
 	})
 
