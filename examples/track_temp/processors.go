@@ -30,12 +30,12 @@ func (t *trackTempProcessor) Name() string { return "Track Temp" }
 
 // Method used for processing every tick of telemetry
 func (t *trackTempProcessor) Process(input ibt.Tick, hasNext bool, session *headers.Session) error {
-	trackTemp, err := ibt.GetVariableValue[float32](input, "TrackTempCrew")
+	trackTemp, err := ibt.GetTickValue[float32](input, "TrackTempCrew")
 	if err != nil {
 		return err
 	}
 
-	lap, err := ibt.GetVariableValue[int](input, "Lap")
+	lap, err := ibt.GetTickValue[int](input, "Lap")
 	if err != nil {
 		return err
 	}
