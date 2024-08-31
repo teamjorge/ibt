@@ -18,6 +18,7 @@ func main() {
 	// We group the stubs by iRacing session. This allows us to summarise results for
 	// an entire session, instead of just a single ibt file.
 	groups := stubs.Group()
+	defer ibt.CloseAllStubs(groups)
 
 	for groupIdx, group := range groups {
 		// Create the instance(s) of your processor(s) for this group

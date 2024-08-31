@@ -27,18 +27,11 @@ func Process(ctx context.Context, stubs StubGroup, processors ...Processor) erro
 }
 
 func process(ctx context.Context, stub Stub, processors ...Processor) error {
-	reader, err := stub.Open()
-	if err != nil {
-		return err
-	}
-
-	defer reader.Close()
-
 	header := stub.header
 
 	whitelist := buildWhitelist(header.VarHeader, processors...)
 
-	parser := NewParser(reader, header, whitelist...)
+	parser := NewParser(stub.r, header, whitelist...)
 	for {
 		select {
 		case <-ctx.Done():

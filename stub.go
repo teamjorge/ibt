@@ -1,6 +1,7 @@
 package ibt
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -16,17 +17,21 @@ import (
 type Stub struct {
 	filepath string
 	header   *headers.Header
+	r        headers.Reader
 }
 
 // Open the underlying ibt file for reading
-func (stub *Stub) Open() (headers.Reader, error) {
-	reader, err := os.Open(stub.Filename())
+func (stub *Stub) Open() (err error) {
+	stub.r, err = os.Open(stub.Filename())
 	if err != nil {
-		return nil, fmt.Errorf("failed to open stub file %s for reading: %v", stub.Filename(), err)
+		return fmt.Errorf("failed to open stub file %s for reading: %v", stub.Filename(), err)
 	}
 
-	return reader, nil
+	return nil
 }
+
+// Close the stub reader
+func (stub *Stub) Close() error { return stub.r.Close() }
 
 // Filename where the stub originated from
 func (stub *Stub) Filename() string { return stub.filepath }
@@ -54,6 +59,23 @@ func (stub *Stub) DriverIdx() int {
 // This group is not necessarily part of the same session, but can be grouped with Group().
 type StubGroup []Stub
 
+// Close the reader for every stub in the group
+func (sg StubGroup) Close() error {
+	errs := make([]error, 0)
+
+	for _, stub := range sg {
+		if err := stub.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+
+	return nil
+}
+
 // ParseStubs will create a stub for each of the given files by parsing their headers.
 func ParseStubs(files ...string) (StubGroup, error) {
 	stubs := make(StubGroup, 0)
@@ -61,6 +83,7 @@ func ParseStubs(files ...string) (StubGroup, error) {
 	for _, file := range files {
 		stub, err := parseStub(file)
 		if err != nil {
+			stubs.Close()
 			return stubs, err
 		}
 
@@ -78,14 +101,13 @@ func parseStub(filename string) (Stub, error) {
 	if err != nil {
 		return stub, fmt.Errorf("failed to open file %s for reading: %v", filename, err)
 	}
-	defer f.Close()
 
 	header, err := headers.ParseHeaders(f)
 	if err != nil {
 		return stub, fmt.Errorf("failed to parse headers for file %s - %v", filename, err)
 	}
 
-	return Stub{filename, header}, nil
+	return Stub{filename, header, f}, nil
 }
 
 // Group stubs together by their iRacing session.
@@ -119,6 +141,22 @@ func (stubs StubGroup) Group() []StubGroup {
 	sort.Sort(groups)
 
 	return groups
+}
+
+func CloseAllStubs(groups []StubGroup) error {
+	errs := make([]error, 0)
+
+	for _, group := range groups {
+		if err := group.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+
+	return nil
 }
 
 // groupTestSessionStubs ensures that ibt files from iRacing Test sessions are grouped correctly.

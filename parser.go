@@ -80,7 +80,6 @@ func (p *Parser) read(start int) []byte {
 	buf := make([]byte, p.header.TelemetryHeader.BufLen)
 	_, err := p.reader.ReadAt(buf, int64(start))
 	if err != nil {
-		defer p.reader.Close()
 		return nil
 	}
 

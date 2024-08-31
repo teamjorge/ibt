@@ -48,7 +48,7 @@ func TestProcess(t *testing.T) {
 	}
 
 	stubs := StubGroup{
-		{filepath: ".testing/valid_test_file.ibt", header: testHeaders},
+		{filepath: ".testing/valid_test_file.ibt", header: testHeaders, r: f},
 	}
 
 	t.Run("test Process() normal processor", func(t *testing.T) {
@@ -74,18 +74,6 @@ func TestProcess(t *testing.T) {
 
 		if err := Process(context.Background(), stubs, &proc); err == nil {
 			t.Error("expected Process() to return an error")
-		}
-	})
-
-	t.Run("test process() invalid file", func(t *testing.T) {
-		proc := testProcessor{whitelist: []string{"LapCurrentLapTime"}}
-
-		invalidStub := Stub{
-			filepath: "disappear_here",
-		}
-
-		if err := process(context.Background(), invalidStub, &proc); err == nil {
-			t.Errorf("expected Process() to exit with a file error")
 		}
 	})
 
