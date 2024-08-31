@@ -72,8 +72,7 @@ func TestStubs(t *testing.T) {
 	t.Run("stubs Open() valid file", func(t *testing.T) {
 		stub := Stub{filepath: ".testing/valid_test_file.ibt"}
 
-		f, err := stub.Open()
-		if err != nil {
+		if err := stub.Open(); err != nil {
 			t.Errorf("did not expect an error when opening file %s. received: %v", ".testing/valid_test_file.ibt", err)
 		}
 
@@ -90,8 +89,7 @@ func TestStubs(t *testing.T) {
 	t.Run("stubs Open() invalid file", func(t *testing.T) {
 		stub := Stub{filepath: ".testing/disappear_here.ibt"}
 
-		_, err := stub.Open()
-		if err == nil {
+		if err := stub.Open(); err == nil {
 			t.Errorf("expected an error when opening a non-existent file %s", ".testing/disappear_here.ibt")
 		}
 	})
@@ -452,5 +450,132 @@ func TestStubGroupSorting(t *testing.T) {
 	})
 }
 
-// Order is not always preserved with the slices
-// Check based on length
+func TestStubGroupClose(t *testing.T) {
+	t.Run("test normal close", func(t *testing.T) {
+		f1, err := os.Open(".testing/empty_test_file.ibt")
+		if err != nil {
+			t.Errorf("failed to open test file %v", err)
+		}
+		defer f1.Close()
+		f2, err := os.Open(".testing/empty_test_file.ibt")
+		if err != nil {
+			t.Errorf("failed to open test file %v", err)
+		}
+		defer f2.Close()
+
+		stubGroup := StubGroup{
+			Stub{filepath: "5.ibt", r: f1},
+			Stub{filepath: "3.ibt", r: f2},
+		}
+
+		err = stubGroup.Close()
+		if err != nil {
+			t.Errorf("expected stub group to close without error. received: %v", err)
+		}
+
+		if err := stubGroup[0].r.Close(); err == nil {
+			t.Errorf("expected stub 0 to be closed")
+		}
+
+		if err := stubGroup[1].r.Close(); err == nil {
+			t.Errorf("expected stub 0 to be closed")
+		}
+	})
+
+	t.Run("test close with error", func(t *testing.T) {
+		f1, err := os.Open(".testing/empty_test_file.ibt")
+		if err != nil {
+			t.Errorf("failed to open test file %v", err)
+		}
+		defer f1.Close()
+		f2, err := os.Open(".testing/empty_test_file.ibt")
+		if err != nil {
+			t.Errorf("failed to open test file %v", err)
+		}
+		f2.Close()
+
+		stubGroup := StubGroup{
+			Stub{filepath: "5.ibt", r: f1},
+			Stub{filepath: "3.ibt", r: f2},
+		}
+
+		err = stubGroup.Close()
+		if err == nil {
+			t.Error("expected stub group to close with an error")
+		}
+
+		if err.Error() != "close .testing/empty_test_file.ibt: file already closed" {
+			t.Errorf("expected error message to be %s. received: %s",
+				"close .testing/empty_test_file.ibt: file already closed", err.Error())
+		}
+	})
+}
+
+func TestCloseAllStubs(t *testing.T) {
+	t.Run("test normal close", func(t *testing.T) {
+		f1, err := os.Open(".testing/empty_test_file.ibt")
+		if err != nil {
+			t.Errorf("failed to open test file %v", err)
+		}
+		defer f1.Close()
+		f2, err := os.Open(".testing/empty_test_file.ibt")
+		if err != nil {
+			t.Errorf("failed to open test file %v", err)
+		}
+		defer f2.Close()
+
+		stubGroups := []StubGroup{
+			{
+				Stub{filepath: "5.ibt", r: f1},
+			},
+			{
+				Stub{filepath: "3.ibt", r: f2},
+			},
+		}
+
+		err = CloseAllStubs(stubGroups)
+		if err != nil {
+			t.Errorf("expected stub group to close without error. received: %v", err)
+		}
+
+		if err := stubGroups[0][0].r.Close(); err == nil {
+			t.Errorf("expected stub 0 to be closed")
+		}
+
+		if err := stubGroups[1][0].r.Close(); err == nil {
+			t.Errorf("expected stub 0 to be closed")
+		}
+	})
+
+	t.Run("test close with error", func(t *testing.T) {
+		f1, err := os.Open(".testing/empty_test_file.ibt")
+		if err != nil {
+			t.Errorf("failed to open test file %v", err)
+		}
+		defer f1.Close()
+		f2, err := os.Open(".testing/empty_test_file.ibt")
+		if err != nil {
+			t.Errorf("failed to open test file %v", err)
+		}
+		f2.Close()
+
+		stubGroups := []StubGroup{
+			{
+				Stub{filepath: "5.ibt", r: f1},
+			},
+			{
+				Stub{filepath: "3.ibt", r: f2},
+			},
+		}
+
+		err = CloseAllStubs(stubGroups)
+		if err == nil {
+			t.Error("expected stub group to close with an error")
+		}
+
+		if err.Error() != "close .testing/empty_test_file.ibt: file already closed" {
+			t.Errorf("expected error message to be %s. received: %s",
+				"close .testing/empty_test_file.ibt: file already closed", err.Error())
+		}
+	})
+}

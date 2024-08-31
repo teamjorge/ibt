@@ -38,7 +38,7 @@ func NewParser(reader headers.Reader, header *headers.Header, whitelist ...strin
 // Next parses and returns the next tick of telemetry variables and whether it can be called again.
 //
 // A return of false will indicate that the buffer has reached the end. If the buffer has reached the end and Next() is called again,
-// a nil and false will be returned.
+// a nil and false will be returned. Additionally, a check can be done to check if the returned Tick is nil to determine if the EOF was reached.
 //
 // Should expected variable values be missing, please ensure that they are added to the Parser whitelist.
 func (p *Parser) Next() (Tick, bool) {
@@ -64,6 +64,8 @@ func (p *Parser) Next() (Tick, bool) {
 //
 // ParseAt is useful if a specific offset is known. An example would be the
 // telemetry variable buffers that are provided during live telemetry parsing.
+//
+// When nil is returned, the buffer has reached EOF.
 func (p *Parser) ParseAt(offset int) Tick {
 	currentBuf := p.read(offset)
 	if currentBuf == nil {
@@ -80,7 +82,6 @@ func (p *Parser) read(start int) []byte {
 	buf := make([]byte, p.header.TelemetryHeader.BufLen)
 	_, err := p.reader.ReadAt(buf, int64(start))
 	if err != nil {
-		defer p.reader.Close()
 		return nil
 	}
 

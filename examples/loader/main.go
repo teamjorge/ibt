@@ -26,6 +26,7 @@ func main() {
 	// We group our stubs mainly to be able to identify the batches we are loading
 	// This might not be necessary on your use case
 	groups := stubs.Group()
+	defer ibt.CloseAllStubs(groups)
 
 	for groupNumber, group := range groups {
 		// Create a new processor for this group and set the groupNumber.
