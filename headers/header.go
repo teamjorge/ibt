@@ -23,11 +23,6 @@ func ParseHeaders(r Reader) (*Header, error) {
 		return nil, fmt.Errorf("failed to parse disk header: %v", err)
 	}
 
-	sessionInfo, err := ReadSessionInfo(r, telemHeader.SessionInfoOffset, telemHeader.SessionInfoLength)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse session info: %v", err)
-	}
-
 	varHeader, err := ReadVarHeader(r, telemHeader.NumVars, telemHeader.VarHeaderOffset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse variable header: %v", err)
@@ -36,6 +31,11 @@ func ParseHeaders(r Reader) (*Header, error) {
 	varBuffers, err := ReadVarBufferHeaders(r, telemHeader.NumBuf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse var buffer header: %v", err)
+	}
+
+	sessionInfo, err := ReadSessionInfo(r, telemHeader.SessionInfoOffset, telemHeader.SessionInfoLength)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse session info: %v", err)
 	}
 
 	return &Header{
