@@ -1,6 +1,8 @@
 package headers
 
 import (
+	"errors"
+	"reflect"
 	"strings"
 
 	"golang.org/x/text/encoding/charmap"
@@ -33,6 +35,10 @@ func ReadSessionInfo(reader Reader, offset, size int) (*Session, error) {
 
 	if err := yaml.Unmarshal([]byte(rawYaml), &output); err != nil {
 		return nil, err
+	}
+
+	if reflect.DeepEqual(output, Session{}) {
+		return nil, errors.New("unexpected empty session info found")
 	}
 
 	return &output, nil

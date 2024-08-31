@@ -2,7 +2,6 @@ package headers
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/teamjorge/ibt/utilities"
 )
@@ -30,7 +29,8 @@ type TelemetryHeader struct {
 	NumVars int
 	// Buffer offset for VarHeader
 	VarHeaderOffset int
-	// Unsure
+	// Specifies the number of telemetry data buffers available.
+	// This will be 1 for ibt files and 3 for memory-mapped live telemetry
 	NumBuf int
 	// Length of the buffer for parsing VarHeader telemetry values
 	BufLen int
@@ -44,7 +44,7 @@ type TelemetryHeader struct {
 func ReadTelemetryHeader(reader Reader) (*TelemetryHeader, error) {
 	headerBuf := make([]byte, TELEMETRY_HEADER_BYTES_SIZE)
 
-	_, err := io.ReadAtLeast(reader, headerBuf, TELEMETRY_HEADER_BYTES_SIZE)
+	_, err := reader.ReadAt(headerBuf, 0)
 	if err != nil {
 		return nil, err
 	}

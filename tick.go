@@ -24,13 +24,13 @@ func (t Tick) Filter(whitelist ...string) Tick {
 	return partialTick
 }
 
-// GetVariableValue will retrieve and type assert the given variable.
-func GetVariableValue[T TickValueType](variables Tick, key string) (T, error) {
+// GetTickValue will retrieve and type assert the given variable.
+func GetTickValue[T TickValueType](tick Tick, key string) (T, error) {
 	var def T
 
-	rawValue, ok := variables[key]
+	rawValue, ok := tick[key]
 	if !ok {
-		return def, fmt.Errorf("key %s not found in telemetry variables", key)
+		return def, fmt.Errorf("key %s not found in tick", key)
 	}
 
 	value, ok := rawValue.(T)

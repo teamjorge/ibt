@@ -2,7 +2,7 @@ package headers
 
 import (
 	"fmt"
-	"io"
+	"math"
 	"time"
 
 	"github.com/teamjorge/ibt/utilities"
@@ -37,9 +37,9 @@ type DiskHeader struct {
 func ReadDiskHeader(reader Reader) (*DiskHeader, error) {
 	diskHeaderBuf := make([]byte, DISK_HEADER_BYTES_SIZE)
 
-	_, err := io.ReadAtLeast(reader, diskHeaderBuf, DISK_HEADER_BYTES_SIZE)
+	_, err := reader.ReadAt(diskHeaderBuf, int64(TELEMETRY_HEADER_BYTES_SIZE))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read disk header buffer: %v", err)
 	}
 
 	h := DiskHeader{
@@ -50,14 +50,16 @@ func ReadDiskHeader(reader Reader) (*DiskHeader, error) {
 		RecordCount: utilities.Byte4ToInt(diskHeaderBuf[28:32]),
 	}
 
-	if h.EndTime == 0.0 || h.RecordCount == 0 || h.StartTime == 0 {
-		return nil, fmt.Errorf("invalid disk header detected. values received: %v", h)
+	if h.EndTime < 0 || h.StartTime < 0 || h.EndTime > math.Pow(10, 20) || h.StartTime > math.Pow(10, 20) ||
+		h.RecordCount == 0 {
+		return nil, fmt.Errorf("invalid disk header detected. values received: %+v", h)
 	}
 
 	// Determine if StartDate is an invalid time value
 	parsedTime := time.Unix(h.StartDate, 0)
 	currentYear := time.Now().Year()
-	if parsedTime.Year() < currentYear-20 || currentYear > parsedTime.Year() {
+
+	if parsedTime.Year() < currentYear-20 || parsedTime.Year() > currentYear+20 {
 		return nil, fmt.Errorf("invalid StartDate detected: %v", parsedTime)
 	}
 

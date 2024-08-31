@@ -29,12 +29,8 @@ func TestParser(t *testing.T) {
 	t.Run("test NewParser", func(t *testing.T) {
 		p := NewParser(f, testHeaders, "Speed", "Lap")
 
-		if p.bufferOffset != 53764 {
-			t.Errorf("expected bufferOffset to be %d, received: %d", 53764, p.bufferOffset)
-		}
-
-		if p.length != 1072 {
-			t.Errorf("expected length to be %d, received: %d", 1072, p.length)
+		if !reflect.DeepEqual(p.header, testHeaders) {
+			t.Errorf("expected headers to be %v, received: %v", testHeaders, p.header)
 		}
 
 		expectedWhitelist := []string{"Lap", "Speed"}
@@ -45,8 +41,8 @@ func TestParser(t *testing.T) {
 			t.Errorf("expected whitelist to be %v, received: %v", expectedWhitelist, p.whitelist)
 		}
 
-		if len(p.varHeader) != 276 {
-			t.Errorf("expected varHeader to be of length %d, actual: %d", 276, len(p.varHeader))
+		if len(p.header.VarHeader) != 276 {
+			t.Errorf("expected varHeader to be of length %d, actual: %d", 276, len(p.header.VarHeader))
 		}
 	})
 }
@@ -139,8 +135,8 @@ func TestParserRead(t *testing.T) {
 	r := testReader{bytes.NewReader(data)}
 	p := Parser{reader: r}
 
-	t.Run("parser read EOF", func(t *testing.T) {
-		p.length = 10
+	t.Run("parser read buffer", func(t *testing.T) {
+		p.header = &headers.Header{TelemetryHeader: &headers.TelemetryHeader{BufLen: 10}}
 		result := p.read(0)
 		expected := []byte(data[:10])
 		if !reflect.DeepEqual(result, expected) {
@@ -149,11 +145,70 @@ func TestParserRead(t *testing.T) {
 	})
 
 	t.Run("parser read EOF", func(t *testing.T) {
-
-		p.length = 129
+		p.header = &headers.Header{TelemetryHeader: &headers.TelemetryHeader{BufLen: 129}}
 		if p.read(0) != nil {
 			t.Error("expected nil")
 		}
 	})
 
+}
+
+func TestParserParseAt(t *testing.T) {
+	f, err := os.Open(".testing/valid_test_file.ibt")
+	if err != nil {
+		t.Errorf("failed to open testing file - %v", err)
+		return
+	}
+	defer f.Close()
+
+	testHeaders, err := headers.ParseHeaders(f)
+	if err != nil {
+		t.Errorf("failed to parse header for testing file - %v", err)
+		return
+	}
+
+	t.Run("parser ParseAt buffer", func(t *testing.T) {
+		p := NewParser(f, testHeaders, "LapCurrentLapTime")
+
+		res := p.ParseAt(testHeaders.TelemetryHeader.BufOffset + (testHeaders.TelemetryHeader.BufLen * 5))
+
+		if res["LapCurrentLapTime"] != float32(37.7452354431) {
+			t.Errorf("expected parsed lap time to be %.10f. received: %.10f", 37.7452354431, res["LapCurrentLapTime"])
+		}
+	})
+
+	t.Run("parser ParseAt EOF buffer", func(t *testing.T) {
+		p := NewParser(f, testHeaders, "LapCurrentLapTime")
+
+		res := p.ParseAt(testHeaders.TelemetryHeader.BufOffset + (testHeaders.TelemetryHeader.BufLen * 390))
+
+		if res != nil {
+			t.Errorf("expected parsed tick to be nil. received %v", res)
+		}
+
+	})
+}
+
+func TestSeek(t *testing.T) {
+	t.Run("test seek", func(t *testing.T) {
+		parser := NewParser(nil, nil)
+
+		parser.Seek(50)
+
+		if parser.current != 50 {
+			t.Errorf("expected parser current to be %d. received %d", 50, parser.current)
+		}
+	})
+}
+
+func TestUpdateWhitelist(t *testing.T) {
+	t.Run("parser read buffer", func(t *testing.T) {
+		parser := NewParser(nil, nil, "Speed")
+
+		parser.UpdateWhitelist("Speed", "Lap")
+
+		if parser.whitelist[0] != "Speed" || parser.whitelist[1] != "Lap" {
+			t.Errorf("expected updated white list to be %v. received: %v", []string{"Speed", "Lap"}, parser.whitelist)
+		}
+	})
 }
