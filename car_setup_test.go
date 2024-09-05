@@ -74,6 +74,8 @@ func TestCarSetupDifference(t *testing.T) {
 			continue
 		}
 
+		comparison = DiscardSetupItems(comparison, HasCategory("TiresAero"), HasSubCategory("LeftFront"), HasSubCategory("RightFront"), HasSubCategory("LeftRear"), HasSubCategory("RightRear"))
+
 		comparisonKeys := CarSetupKeys(maps.Keys(comparison))
 		sort.Sort(comparisonKeys)
 

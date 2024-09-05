@@ -226,53 +226,19 @@ func compareSetupNumericalItem(i1, i2 CarSetupItemParsedValue) float64 {
 	return value2 - value1
 }
 
-func FilterSetupItems[k comparable](setupItems map[CarSetupKey]k, category, subCategory, itemName string) map[CarSetupKey]k {
-	var flag int
-	if category != "" {
-		flag += 1
-	}
-	if subCategory != "" {
-		flag += 2
-	}
-	if itemName != "" {
-		flag += 4
-	}
-
-	var keepFunc func(CarSetupKey) bool
-
-	switch flag {
-	case 0:
-		return setupItems
-	case 1:
-		keepFunc = func(csk CarSetupKey) bool {
-			return strings.HasPrefix(string(csk), category)
-		}
-	case 2:
-		keepFunc = func(csk CarSetupKey) bool {
-			return strings.Split(string(csk), "|")[1] == subCategory
-		}
-	case 3:
-		keepFunc = func(csk CarSetupKey) bool {
-			return strings.HasPrefix(string(csk), strings.Join([]string{category, subCategory}, "|"))
-		}
-	case 5:
-		keepFunc = func(csk CarSetupKey) bool {
-			return strings.HasPrefix(string(csk), category) && strings.HasSuffix(string(csk), itemName)
-		}
-	case 6:
-		keepFunc = func(csk CarSetupKey) bool {
-			return strings.HasSuffix(string(csk), strings.Join([]string{subCategory, itemName}, "|"))
-		}
-	case 7:
-		keepFunc = func(csk CarSetupKey) bool {
-			return csk == NewCarSetupKey(category, subCategory, itemName)
-		}
-	}
-
+func FilterSetupItems[k comparable](setupItems map[CarSetupKey]k, filterFuncs ...SetupFilteringFunc) map[CarSetupKey]k {
 	filteredItems := make(map[CarSetupKey]k)
 
 	for item, value := range setupItems {
-		if keepFunc(item) {
+		keep := true
+		for _, filterFunc := range filterFuncs {
+			if !filterFunc(item) {
+				keep = false
+				break
+			}
+		}
+
+		if keep {
 			filteredItems[item] = value
 		}
 	}
@@ -280,7 +246,27 @@ func FilterSetupItems[k comparable](setupItems map[CarSetupKey]k, category, subC
 	return filteredItems
 }
 
-type SetupDiscardFunc func(string) func(CarSetupKey) bool
+func DiscardSetupItems[k comparable](setupItems map[CarSetupKey]k, filterFuncs ...SetupFilteringFunc) map[CarSetupKey]k {
+	filteredItems := make(map[CarSetupKey]k)
+
+	for item, value := range setupItems {
+		discard := false
+		for _, filterFunc := range filterFuncs {
+			if filterFunc(item) {
+				discard = true
+				break
+			}
+		}
+
+		if !discard {
+			filteredItems[item] = value
+		}
+	}
+
+	return filteredItems
+}
+
+type SetupFilteringFunc func(csk CarSetupKey) bool
 
 func HasCategory(category string) func(csk CarSetupKey) bool {
 	return func(csk CarSetupKey) bool {
@@ -290,14 +276,12 @@ func HasCategory(category string) func(csk CarSetupKey) bool {
 
 func HasSubCategory(subCategory string) func(csk CarSetupKey) bool {
 	return func(csk CarSetupKey) bool {
-		extractedSubCategory := strings.Split(string(csk), "|")[1]
-		return strings.HasPrefix(extractedSubCategory, subCategory)
+		return strings.HasPrefix(csk.SubCategory(), subCategory)
 	}
 }
 
 func HasItemName(itemName string) func(csk CarSetupKey) bool {
 	return func(csk CarSetupKey) bool {
-		extractedSubCategory := strings.Split(string(csk), "|")[1]
-		return strings.HasPrefix(extractedSubCategory, itemName)
+		return strings.HasPrefix(csk.ItemName(), itemName)
 	}
 }
