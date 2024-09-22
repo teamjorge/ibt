@@ -1,16 +1,149 @@
 package ibt
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"sort"
 	"testing"
 
 	"github.com/teamjorge/ibt/headers"
-	"golang.org/x/exp/maps"
 )
+
+func TestCarSetupKeysSort(t *testing.T) {
+	keys := CarSetupKeys{
+		CarSetupKey("DriveBrake|PowerUnitConfig|EngineBraking"),
+		CarSetupKey("TiresAero|RightFrontTire|StartingPressure"),
+		CarSetupKey("Chassis|Front|HeaveRate"),
+		CarSetupKey("DriveBrake|Differential|Middle"),
+	}
+
+	sort.Sort(keys)
+
+	expected := CarSetupKeys{
+		CarSetupKey("Chassis|Front|HeaveRate"),
+		CarSetupKey("DriveBrake|Differential|Middle"),
+		CarSetupKey("DriveBrake|PowerUnitConfig|EngineBraking"),
+		CarSetupKey("TiresAero|RightFrontTire|StartingPressure"),
+	}
+
+	if !reflect.DeepEqual(keys, expected) {
+		t.Errorf("Sort() CarSetupKeys = %v, want %v", keys, expected)
+	}
+}
+
+func TestNewCarSetupKey(t *testing.T) {
+	type args struct {
+		category    string
+		subcategory string
+		itemName    string
+	}
+	tests := []struct {
+		name string
+		args args
+		want CarSetupKey
+	}{
+		{
+			"normal new car setup key",
+			args{"cat", "subcat", "item"},
+			"cat|subcat|item",
+		},
+		{
+			"missing value new setup key",
+			args{category: "cat", itemName: "item"},
+			"cat||item",
+		},
+		{
+			"empty new setup key",
+			args{},
+			"||",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewCarSetupKey(tt.args.category, tt.args.subcategory, tt.args.itemName); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewCarSetupKey() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCarSetupKey_CategorySubCategoryItemName(t *testing.T) {
+	tests := []struct {
+		name string
+		csk  CarSetupKey
+		want string
+	}{
+		{
+			"normal setup key category",
+			CarSetupKey("cat|sub|item"),
+			"cat",
+		},
+		{
+			"empty setup key category",
+			CarSetupKey("|sub|item"),
+			"",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.csk.Category(); got != tt.want {
+				t.Errorf("CarSetupKey.Category() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCarSetupKey_SubCategory(t *testing.T) {
+	tests := []struct {
+		name string
+		csk  CarSetupKey
+		want string
+	}{
+		{
+			"normal setup key sub category",
+			CarSetupKey("cat|sub|item"),
+			"sub",
+		},
+		{
+			"empty setup key sub category",
+			CarSetupKey("cat||item"),
+			"",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.csk.SubCategory(); got != tt.want {
+				t.Errorf("CarSetupKey.SubCategory() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCarSetupKey_ItemName(t *testing.T) {
+	tests := []struct {
+		name string
+		csk  CarSetupKey
+		want string
+	}{
+		{
+			"normal setup key item name",
+			CarSetupKey("cat|sub|item"),
+			"item",
+		},
+		{
+			"empty setup key item name",
+			CarSetupKey("cat|sub|"),
+			"",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.csk.ItemName(); got != tt.want {
+				t.Errorf("CarSetupKey.ItemName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
 
 func TestParseCarSetup(t *testing.T) {
 	f, err := os.Open(".testing/valid_test_file.ibt")
@@ -26,69 +159,865 @@ func TestParseCarSetup(t *testing.T) {
 		return
 	}
 
-	t.Run("full setup test", func(t *testing.T) {
-
-		setup := ParseCarSetup(header.SessionInfo)
-
-		if setup.Name != expectedFullCarSetup.Name {
-			t.Errorf("expected setup name to be %s. received: %s", expectedFullCarSetup.Name, setup.Name)
-		}
-
-		if setup.Update != expectedFullCarSetup.Update {
-			t.Errorf("expected setup update to be %d. received: %d", expectedFullCarSetup.Update, setup.Update)
-		}
-
-		for itemName, itemValue := range expectedFullCarSetup.Values {
-			if !reflect.DeepEqual(setup.Values[itemName], itemValue) {
-				t.Errorf("item %s has unexpected values. \nexpected: %+v\n \nactual: %+v\n",
-					itemName, itemValue, setup.Values[itemName])
+	type args struct {
+		sessionInfo *headers.Session
+	}
+	tests := []struct {
+		name string
+		args args
+		want *CarSetup
+	}{
+		{
+			"test parse setup from valid header",
+			args{header.SessionInfo},
+			expectedFullCarSetup,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ParseCarSetup(tt.args.sessionInfo); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseCarSetup() = %v, want %v", got, tt.want)
 			}
-		}
-	})
+		})
+	}
 }
 
-func TestCarSetupDifference(t *testing.T) {
-	files, err := filepath.Glob(".testing/mercedesw13*.ibt")
+func TestStub_CarSetup(t *testing.T) {
+	f, err := os.Open(".testing/valid_test_file.ibt")
 	if err != nil {
-		t.Error(err)
+		t.Errorf("failed to open testing file - %+v", err)
+		return
 	}
+	defer f.Close()
 
-	stubs, err := ParseStubs(files...)
+	header, err := headers.ParseHeaders(f)
 	if err != nil {
-		t.Error(err)
+		t.Errorf("failed to parse session header for testing file - %+v", err)
+		return
 	}
 
-	setups := make([]*CarSetup, 0)
-
-	for _, stub := range stubs {
-		setups = append(setups, stub.CarSetup())
+	stub := Stub{
+		header: header,
 	}
 
-	for i := 0; i < len(setups); i++ {
-		if i+1 >= len(setups) {
-			break
-		}
+	tests := []struct {
+		name string
+		stub Stub
+		want *CarSetup
+	}{
+		{
+			"parse setup from stub",
+			stub,
+			expectedFullCarSetup,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.stub.CarSetup(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Stub.CarSetup() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
 
-		comparison := CompareSetups(setups[i], setups[i+1]).Differences()
-		if len(comparison) == 0 {
-			continue
-		}
-
-		comparison = DiscardSetupItems(comparison, HasCategory("TiresAero"), HasSubCategory("LeftFront"), HasSubCategory("RightFront"), HasSubCategory("LeftRear"), HasSubCategory("RightRear"))
-
-		comparisonKeys := CarSetupKeys(maps.Keys(comparison))
-		sort.Sort(comparisonKeys)
-
-		for _, key := range comparisonKeys {
-			diff := comparison[key]
-
-			fmt.Printf("%s - %s - %s - %s\n", key.Category(), key.SubCategory(), key.ItemName(), diff.RawDifference)
-		}
-
-		fmt.Println()
+func TestCarSetupDetails_Add(t *testing.T) {
+	carSetupItem1 := &CarSetupItem{RawValue: "medium"}
+	carSetupItem2 := &CarSetupItem{
+		RawValue: "+3 Clicks",
+		Parsed: []CarSetupItemParsedValue{
+			{
+				MeasurementUnit: "Clicks",
+				NumericalSign:   1,
+				NumericalValue:  3,
+			},
+		},
 	}
 
-	t.Fail()
+	type args struct {
+		category    string
+		subcategory string
+		itemName    string
+		value       *CarSetupItem
+	}
+	tests := []struct {
+		name string
+		s    CarSetupDetails
+		args args
+		want string
+	}{
+		{
+			"test string setup",
+			CarSetupDetails{},
+			args{
+				"cat",
+				"sub",
+				"item name",
+				carSetupItem1,
+			},
+			"medium",
+		},
+		{
+			"test string setup",
+			CarSetupDetails{},
+			args{
+				"cat",
+				"sub",
+				"item name",
+				carSetupItem2,
+			},
+			"+3 Clicks",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.s.Add(tt.args.category, tt.args.subcategory, tt.args.itemName, tt.args.value)
+
+			key := NewCarSetupKey(tt.args.category, tt.args.subcategory, tt.args.itemName)
+			item, ok := tt.s[key]
+			if !ok {
+				t.Errorf("expected key %s to be added to car setup", key)
+			}
+
+			if item.RawValue != tt.want {
+				t.Errorf("expected raw value to be %s. received %s", tt.want, item.RawValue)
+			}
+		})
+	}
+}
+
+func TestCarSetupItem_IsParsed(t *testing.T) {
+	carSetupItem1 := &CarSetupItem{RawValue: "medium"}
+	carSetupItem2 := &CarSetupItem{
+		RawValue: "+3 Clicks",
+		Parsed: []CarSetupItemParsedValue{
+			{
+				MeasurementUnit: "Clicks",
+				NumericalSign:   1,
+				NumericalValue:  3,
+			},
+		},
+	}
+
+	tests := []struct {
+		name string
+		c    *CarSetupItem
+		want bool
+	}{
+		{
+			"not parsed",
+			carSetupItem1,
+			false,
+		},
+		{
+			"parsed",
+			carSetupItem2,
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.c.IsParsed(); got != tt.want {
+				t.Errorf("CarSetupItem.IsParsed() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseSetupItem(t *testing.T) {
+	type args struct {
+		input string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []CarSetupItemParsedValue
+	}{
+		{
+			"parse non-metric setup item",
+			args{
+				input: "medium",
+			},
+			[]CarSetupItemParsedValue{},
+		},
+		{
+			"parse single metric setup item",
+			args{
+				input: "+3 Clicks",
+			},
+			[]CarSetupItemParsedValue{
+				{
+					MeasurementUnit: "Clicks",
+					NumericalSign:   1,
+					NumericalValue:  3,
+				},
+			},
+		},
+		{
+			"parse multiple metric setup item",
+			args{
+				input: "95%, 97%, 96%",
+			},
+			[]CarSetupItemParsedValue{
+				{
+					MeasurementUnit: "%",
+					NumericalSign:   0,
+					NumericalValue:  95,
+				},
+				{
+					MeasurementUnit: "%",
+					NumericalSign:   0,
+					NumericalValue:  97,
+				},
+				{
+					MeasurementUnit: "%",
+					NumericalSign:   0,
+					NumericalValue:  96,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ParseSetupItem(tt.args.input); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseSetupItem() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_parseCarSetupItemFromInput(t *testing.T) {
+	type args struct {
+		input string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    CarSetupItemParsedValue
+		wantErr bool
+	}{
+		{
+			"parse downforce pattern",
+			args{"4.501:1"},
+			CarSetupItemParsedValue{},
+			true,
+		},
+		{
+			"parse no numerical value",
+			args{"medium"},
+			CarSetupItemParsedValue{},
+			true,
+		},
+		{
+			"parse incorrect float",
+			args{"0....32221 %"},
+			CarSetupItemParsedValue{},
+			true,
+		},
+		{
+			"parse normal value",
+			args{"%"},
+			CarSetupItemParsedValue{},
+			true,
+		},
+		{
+			"test ride height",
+			args{"25.0 mm"},
+			CarSetupItemParsedValue{
+				NumericalValue:  25.0,
+				NumericalSign:   0,
+				MeasurementUnit: "mm",
+			},
+			false,
+		},
+		{
+			"test heave rate",
+			args{"750 N/mm"},
+			CarSetupItemParsedValue{
+				NumericalValue:  750.0,
+				NumericalSign:   0,
+				MeasurementUnit: "N/mm",
+			},
+			false,
+		},
+		{
+			"test corner weight",
+			args{"1902 N"},
+			CarSetupItemParsedValue{
+				NumericalValue:  1902.0,
+				NumericalSign:   0,
+				MeasurementUnit: "N",
+			},
+			false,
+		},
+		{
+			"test camber",
+			args{"-3.15 deg"},
+			CarSetupItemParsedValue{
+				NumericalValue:  3.15,
+				NumericalSign:   -1,
+				MeasurementUnit: "deg",
+			},
+			false,
+		},
+		{
+			"test toe in",
+			args{"+0.05 deg"},
+			CarSetupItemParsedValue{
+				NumericalValue:  0.05,
+				NumericalSign:   1,
+				MeasurementUnit: "deg",
+			},
+			false,
+		},
+		{
+			"test fuel",
+			args{"45 Kg"},
+			CarSetupItemParsedValue{
+				NumericalValue:  45.0,
+				NumericalSign:   0,
+				MeasurementUnit: "Kg",
+			},
+			false,
+		},
+		{
+			"test bbal",
+			args{"52.5% (BBAL)"},
+			CarSetupItemParsedValue{
+				NumericalValue:  52.5,
+				NumericalSign:   0,
+				MeasurementUnit: "% (BBAL)",
+			},
+			false,
+		},
+		{
+			"test fine bbal",
+			args{"-1.0 (BB+/BB-)"},
+			CarSetupItemParsedValue{
+				NumericalValue:  1.0,
+				NumericalSign:   -1,
+				MeasurementUnit: "(BB+/BB-)",
+			},
+			false,
+		},
+		{
+			"test dynamic ramping",
+			args{"20% pedal"},
+			CarSetupItemParsedValue{
+				NumericalValue:  20,
+				NumericalSign:   0,
+				MeasurementUnit: "% pedal",
+			},
+			false,
+		},
+		{
+			"test brake migration",
+			args{"6 (BMIG)"},
+			CarSetupItemParsedValue{
+				NumericalValue:  6,
+				NumericalSign:   0,
+				MeasurementUnit: "(BMIG)",
+			},
+			false,
+		},
+		{
+			"test aero balance",
+			args{"48.14%"},
+			CarSetupItemParsedValue{
+				NumericalValue:  48.14,
+				NumericalSign:   0,
+				MeasurementUnit: "%",
+			},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseCarSetupItemFromInput(tt.args.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseCarSetupItemFromInput() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("parseCarSetupItemFromInput() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCarSetupComparison_Differences(t *testing.T) {
+	heaveRate1 := &CarSetupItem{
+		"750 N/mm",
+		[]CarSetupItemParsedValue{
+			{
+				NumericalValue:  750.0,
+				NumericalSign:   0,
+				MeasurementUnit: "N/mm",
+			},
+		},
+	}
+
+	heaveRate2 := &CarSetupItem{
+		"780 N/mm",
+		[]CarSetupItemParsedValue{
+			{
+				NumericalValue:  780.0,
+				NumericalSign:   0,
+				MeasurementUnit: "N/mm",
+			},
+		},
+	}
+
+	tests := []struct {
+		name string
+		c    CarSetupComparison
+		want map[CarSetupKey]*CarSetupComparisonItem
+	}{
+		{
+			"test has differences",
+			CarSetupComparison{
+				"Chassis|Front|HeaveRate": &CarSetupComparisonItem{
+					heaveRate1,
+					heaveRate2,
+					[]float64{30},
+					"750 N/mm -> 780 N/mm",
+					true,
+				},
+				"TiresAero|TireCompound|TireCompound": &CarSetupComparisonItem{
+					I1: &CarSetupItem{RawValue: "Medium"},
+					I2: &CarSetupItem{RawValue: "Medium"},
+				},
+			},
+			map[CarSetupKey]*CarSetupComparisonItem{
+				"Chassis|Front|HeaveRate": {
+					heaveRate1, heaveRate2,
+					[]float64{30},
+					"750 N/mm -> 780 N/mm",
+					true,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.c.Differences(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CarSetupComparison.Differences() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCompareSetups(t *testing.T) {
+	type args struct {
+		s1 *CarSetup
+		s2 *CarSetup
+	}
+	tests := []struct {
+		name string
+		args args
+		want CarSetupComparison
+	}{
+		{
+			"full comparison",
+			args{
+				expectedFullCarSetup,
+				comparisonCarSetup,
+			},
+			CarSetupComparison{
+				"Chassis|Front|HeaveRate": {
+					expectedFullCarSetup.Values["Chassis|Front|HeaveRate"], comparisonCarSetup.Values["Chassis|Front|HeaveRate"],
+					[]float64{30},
+					"750 N/mm -> 780 N/mm",
+					true,
+				},
+				"TiresAero|TireCompound|TireCompound": {
+					expectedFullCarSetup.Values["TiresAero|TireCompound|TireCompound"], comparisonCarSetup.Values["TiresAero|TireCompound|TireCompound"],
+					nil,
+					"Medium -> Soft",
+					true,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CompareSetups(tt.args.s1, tt.args.s2).Differences()
+			for key, comparisonValue := range got {
+				if !reflect.DeepEqual(comparisonValue, tt.want[key]) {
+					t.Errorf("CompareSetups() key %s = %v, want %v", key, comparisonValue, tt.want[key])
+				}
+			}
+		})
+	}
+}
+
+func TestCompareSetupItemParsedValue(t *testing.T) {
+	type args struct {
+		i1 *CarSetupItem
+		i2 *CarSetupItem
+	}
+	tests := []struct {
+		name string
+		args args
+		want CarSetupComparisonItem
+	}{
+		{
+			"normal with metric values",
+			args{
+				expectedFullCarSetup.Values["Chassis|Front|HeaveRate"],
+				comparisonCarSetup.Values["Chassis|Front|HeaveRate"],
+			},
+			CarSetupComparisonItem{
+				expectedFullCarSetup.Values["Chassis|Front|HeaveRate"], comparisonCarSetup.Values["Chassis|Front|HeaveRate"],
+				[]float64{30},
+				"750 N/mm -> 780 N/mm",
+				true,
+			},
+		},
+		{
+			"normal with string values",
+			args{
+				expectedFullCarSetup.Values["TiresAero|TireCompound|TireCompound"],
+				comparisonCarSetup.Values["TiresAero|TireCompound|TireCompound"],
+			},
+			CarSetupComparisonItem{
+				expectedFullCarSetup.Values["TiresAero|TireCompound|TireCompound"], comparisonCarSetup.Values["TiresAero|TireCompound|TireCompound"],
+				nil,
+				"Medium -> Soft",
+				true,
+			},
+		},
+		{
+			"mismatched items",
+			args{
+				expectedFullCarSetup.Values["TiresAero|TireCompound|TireCompound"],
+				comparisonCarSetup.Values["Chassis|Front|HeaveRate"],
+			},
+			CarSetupComparisonItem{
+				expectedFullCarSetup.Values["TiresAero|TireCompound|TireCompound"], comparisonCarSetup.Values["Chassis|Front|HeaveRate"],
+				nil,
+				"Medium -> 780 N/mm",
+				true,
+			},
+		},
+		{
+			"same value",
+			args{
+				expectedFullCarSetup.Values["TiresAero|TireCompound|TireCompound"],
+				expectedFullCarSetup.Values["TiresAero|TireCompound|TireCompound"],
+			},
+			CarSetupComparisonItem{
+				expectedFullCarSetup.Values["TiresAero|TireCompound|TireCompound"], expectedFullCarSetup.Values["TiresAero|TireCompound|TireCompound"],
+				nil,
+				"",
+				false,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := CompareSetupItemParsedValue(tt.args.i1, tt.args.i2); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CompareSetupItemParsedValue() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_compareSetupNumericalItem(t *testing.T) {
+	type args struct {
+		i1 CarSetupItemParsedValue
+		i2 CarSetupItemParsedValue
+	}
+	tests := []struct {
+		name string
+		args args
+		want float64
+	}{
+		{
+			"neg lower",
+			args{
+				CarSetupItemParsedValue{NumericalValue: 4, NumericalSign: -1},
+				CarSetupItemParsedValue{NumericalValue: 6, NumericalSign: -1},
+			},
+			-2,
+		},
+		{
+			"neg higher",
+			args{
+				CarSetupItemParsedValue{NumericalValue: 4, NumericalSign: -1},
+				CarSetupItemParsedValue{NumericalValue: 1, NumericalSign: -1},
+			},
+			3,
+		},
+		{
+			"neg to pos",
+			args{
+				CarSetupItemParsedValue{NumericalValue: 4, NumericalSign: -1},
+				CarSetupItemParsedValue{NumericalValue: 2, NumericalSign: 0},
+			},
+			6,
+		},
+		{
+			"pos to neg",
+			args{
+				CarSetupItemParsedValue{NumericalValue: 4, NumericalSign: 0},
+				CarSetupItemParsedValue{NumericalValue: 2, NumericalSign: -1},
+			},
+			-6,
+		},
+		{
+			"pos lower",
+			args{
+				CarSetupItemParsedValue{NumericalValue: 4, NumericalSign: 1},
+				CarSetupItemParsedValue{NumericalValue: 2, NumericalSign: 1},
+			},
+			-2,
+		},
+		{
+			"pos higher",
+			args{
+				CarSetupItemParsedValue{NumericalValue: 1, NumericalSign: 1},
+				CarSetupItemParsedValue{NumericalValue: 3, NumericalSign: 1},
+			},
+			2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := compareSetupNumericalItem(tt.args.i1, tt.args.i2); got != tt.want {
+				t.Errorf("compareSetupNumericalItem() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSetupFilter_Compare(t *testing.T) {
+	type args struct {
+		key CarSetupKey
+	}
+	tests := []struct {
+		name string
+		s    SetupFilter
+		args args
+		want bool
+	}{
+		{
+			"prefix category exists",
+			SetupFilter{Category: "cat"},
+			args{"category|subcategory|item_name"},
+			true,
+		},
+		{
+			"contains category exists",
+			SetupFilter{Category: "egory"},
+			args{"category|subcategory|item_name"},
+			true,
+		},
+		{
+			"category full",
+			SetupFilter{Category: "category"},
+			args{"category|subcategory|item_name"},
+			true,
+		},
+		{
+			"prefix category does not exist",
+			SetupFilter{Category: "bork?"},
+			args{"category|subcategory|item_name"},
+			false,
+		},
+		{
+			"prefix subcategory exists",
+			SetupFilter{SubCategory: "subcat"},
+			args{"category|subcategory|item_name"},
+			true,
+		},
+		{
+			"subcategory contains",
+			SetupFilter{SubCategory: "bcat"},
+			args{"category|subcategory|item_name"},
+			true,
+		},
+		{
+			"subcategory full",
+			SetupFilter{SubCategory: "subcategory"},
+			args{"category|subcategory|item_name"},
+			true,
+		},
+		{
+			"prefix subcategory does not exist",
+			SetupFilter{SubCategory: "bork?"},
+			args{"category|subcategory|item_name"},
+			false,
+		},
+		{
+			"prefix item name exists",
+			SetupFilter{ItemName: "item"},
+			args{"category|subcategory|item_name"},
+			true,
+		},
+		{
+			"item name full",
+			SetupFilter{ItemName: "item_name"},
+			args{"category|subcategory|item_name"},
+			true,
+		},
+		{
+			"contains item name",
+			SetupFilter{ItemName: "m_n"},
+			args{"category|subcategory|item_name"},
+			true,
+		},
+		{
+			"prefix item name does not exist",
+			SetupFilter{ItemName: "bork?"},
+			args{"category|subcategory|item_name"},
+			false,
+		},
+		{
+			"prefix multiple exists",
+			SetupFilter{ItemName: "item", Category: "cat"},
+			args{"category|subcategory|item_name"},
+			true,
+		},
+		{
+			"prefix multiple one doesnt exist",
+			SetupFilter{ItemName: "item_name", Category: "bork?"},
+			args{"category|subcategory|item_name"},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.s.Compare(tt.args.key); got != tt.want {
+				t.Errorf("SetupFilter.Compare() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFilterSetupItems(t *testing.T) {
+	inputCarSetup := map[CarSetupKey]*CarSetup{
+		"TiresAero|LeftRearTire|StartingPressure":     {},
+		"TiresAero|RightFrontTire|LastHotPressure":    {},
+		"TiresAero|RightRearTire|LastTempsIMO":        {},
+		"TiresAero|TireCompound|TireCompound":         {},
+		"DriveBrake|BrakeSystemConfig|TotalBrakeBias": {},
+	}
+
+	type args struct {
+		setupItems map[CarSetupKey]*CarSetup
+		filters    []SetupFilter
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[CarSetupKey]*CarSetup
+	}{
+		{
+			"filter for tiresaero pressures",
+			args{
+				setupItems: inputCarSetup,
+				filters:    []SetupFilter{{"TiresAero", "", "Pressure"}},
+			},
+			map[CarSetupKey]*CarSetup{
+				"TiresAero|LeftRearTire|StartingPressure":  inputCarSetup["TiresAero|LeftRearTire|StartingPressure"],
+				"TiresAero|RightFrontTire|LastHotPressure": inputCarSetup["TiresAero|RightFrontTire|LastHotPressure"],
+			},
+		},
+		{
+			"filter for tire data",
+			args{
+				setupItems: inputCarSetup,
+				filters:    []SetupFilter{{"", "Tire", ""}},
+			},
+			map[CarSetupKey]*CarSetup{
+				"TiresAero|LeftRearTire|StartingPressure":  inputCarSetup["TiresAero|LeftRearTire|StartingPressure"],
+				"TiresAero|RightFrontTire|LastHotPressure": inputCarSetup["TiresAero|RightFrontTire|LastHotPressure"],
+				"TiresAero|RightRearTire|LastTempsIMO":     inputCarSetup["TiresAero|RightRearTire|LastTempsIMO"],
+				"TiresAero|TireCompound|TireCompound":      inputCarSetup["TiresAero|TireCompound|TireCompound"],
+			},
+		},
+		{
+			"filter for brake bias",
+			args{
+				setupItems: inputCarSetup,
+				filters:    []SetupFilter{{"Brake", "", "Total"}},
+			},
+			map[CarSetupKey]*CarSetup{
+				"DriveBrake|BrakeSystemConfig|TotalBrakeBias": inputCarSetup["DriveBrake|BrakeSystemConfig|TotalBrakeBias"],
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FilterSetupItems(tt.args.setupItems, tt.args.filters...); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FilterSetupItems() = \n%v\n, want \n%v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDiscardSetupItems(t *testing.T) {
+	inputCarSetup := map[CarSetupKey]*CarSetup{
+		"TiresAero|LeftRearTire|StartingPressure":     {},
+		"TiresAero|RightFrontTire|LastHotPressure":    {},
+		"TiresAero|RightRearTire|LastTempsIMO":        {},
+		"TiresAero|TireCompound|TireCompound":         {},
+		"DriveBrake|BrakeSystemConfig|TotalBrakeBias": {},
+	}
+
+	type args struct {
+		setupItems map[CarSetupKey]*CarSetup
+		filters    []SetupFilter
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[CarSetupKey]*CarSetup
+	}{
+		{
+			"discard tiresaero pressures",
+			args{
+				setupItems: inputCarSetup,
+				filters:    []SetupFilter{{"TiresAero", "", "Pressure"}},
+			},
+			map[CarSetupKey]*CarSetup{
+				"TiresAero|RightRearTire|LastTempsIMO":        inputCarSetup["TiresAero|RightRearTire|LastTempsIMO"],
+				"TiresAero|TireCompound|TireCompound":         inputCarSetup["TiresAero|TireCompound|TireCompound"],
+				"DriveBrake|BrakeSystemConfig|TotalBrakeBias": inputCarSetup["DriveBrake|BrakeSystemConfig|TotalBrakeBias"],
+			},
+		},
+		{
+			"discard tire data",
+			args{
+				setupItems: inputCarSetup,
+				filters:    []SetupFilter{{"", "Tire", ""}},
+			},
+			map[CarSetupKey]*CarSetup{
+				"DriveBrake|BrakeSystemConfig|TotalBrakeBias": inputCarSetup["DriveBrake|BrakeSystemConfig|TotalBrakeBias"],
+			},
+		},
+		{
+			"discard brake bias",
+			args{
+				setupItems: inputCarSetup,
+				filters:    []SetupFilter{{"Brake", "", "Total"}},
+			},
+			map[CarSetupKey]*CarSetup{
+				"TiresAero|LeftRearTire|StartingPressure":  inputCarSetup["TiresAero|LeftRearTire|StartingPressure"],
+				"TiresAero|RightFrontTire|LastHotPressure": inputCarSetup["TiresAero|RightFrontTire|LastHotPressure"],
+				"TiresAero|RightRearTire|LastTempsIMO":     inputCarSetup["TiresAero|RightRearTire|LastTempsIMO"],
+				"TiresAero|TireCompound|TireCompound":      inputCarSetup["TiresAero|TireCompound|TireCompound"],
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := DiscardSetupItems(tt.args.setupItems, tt.args.filters...); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DiscardSetupItems() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
 var expectedFullCarSetup = &CarSetup{
@@ -690,6 +1619,25 @@ var expectedFullCarSetup = &CarSetup{
 		"TiresAero|TireCompound|TireCompound": &CarSetupItem{
 			RawValue: "Medium",
 			Parsed:   make([]CarSetupItemParsedValue, 0),
+		},
+	},
+}
+
+var comparisonCarSetup = &CarSetup{
+	Name: "comparison setup",
+	Values: map[CarSetupKey]*CarSetupItem{
+		"Chassis|Front|HeaveRate": &CarSetupItem{
+			"780 N/mm",
+			[]CarSetupItemParsedValue{
+				{
+					NumericalValue:  780.0,
+					NumericalSign:   0,
+					MeasurementUnit: "N/mm",
+				},
+			},
+		},
+		"TiresAero|TireCompound|TireCompound": &CarSetupItem{
+			RawValue: "Soft",
 		},
 	},
 }
